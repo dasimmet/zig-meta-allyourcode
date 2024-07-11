@@ -1,6 +1,13 @@
 .{
     .name = "meta_allyourcode",
     .version = "0.0.0",
+    .dependencies = .{
+        .cmake = .{
+            .url = "git+https://github.com/Kitware/CMake.git#de8911120eea6aa8df5e156bce2643c819e7c10f",
+            .hash = "1220eb2e653e9bacbe71bca3189493db349966b537104134b97a03b61c4e1a0b8088",
+            .lazy = true,
+        },
+    },
     .paths = .{
         "build.zig",
         "build.zig.zon",
