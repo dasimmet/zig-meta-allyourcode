@@ -1,0 +1,13 @@
+.{
+    .name = "meta_allyourcode_example",
+    .version = "0.0.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+    .dependencies = .{
+        .meta_allyourcode = .{
+            .path = "..",
+        },
+    },
+}
