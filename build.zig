@@ -13,8 +13,8 @@ pub fn build(b: *std.Build) void {
         .optimize = b.standardOptimizeOption(.{}),
     };
     const func = FunctionStep.init(b, .{
-        .makeFunc = testFunction,
-        .cacheFunc = testFunction,
+        .makeFunc = makeFunction,
+        .cacheFunc = cacheFunction,
     });
     b.step("func", "").dependOn(&func.step);
 
@@ -80,7 +80,7 @@ pub fn mergeStructFields(ta: type, tb: type) type {
         .fields = &fields,
         .layout = .auto,
         .decls = &.{},
-        .is_tuple = false,
+        .is_tuple = typeinfo_a.Struct.is_tuple,
     } });
 }
 
@@ -90,10 +90,15 @@ pub const DefaultBuildOptions = struct {
     @"test": u8 = 0,
 };
 
-fn testFunction(man: *std.Build.Cache.Manifest, ctx: ?*anyopaque) anyerror!void{
-    _ = ctx;
+fn cacheFunction(args: *FunctionStep.Args) anyerror!void{
     var rand = std.Random.DefaultPrng.init(@as(u64, @bitCast(std.time.milliTimestamp())));
-    man.hash.add(rand.random().int(u64));
+    args.man.hash.add(rand.random().int(u64));
+}
+
+fn makeFunction(args: *FunctionStep.Args) anyerror!void{
+    const hash = args.man.final();
+    std.debug.print("WOLOLO: {x}\n", .{std.fmt.fmtSliceHexLower(&hash)});
+    std.debug.print("WOLOLO: {x}\n", .{std.fmt.fmtSliceHexLower(&hash)});
 }
 
 pub const lazy = struct {

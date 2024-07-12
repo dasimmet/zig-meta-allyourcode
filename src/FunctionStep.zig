@@ -2,8 +2,15 @@ const std = @import("std");
 
 const FunctionStep = @This();
 
-pub const CacheFunction = *const fn(*std.Build.Cache.Manifest, ?*anyopaque) anyerror!void;
-pub const MakeFunction = *const fn(*std.Build.Cache.Manifest, ?*anyopaque) anyerror!void;
+pub const CacheFunction = *const fn(*Args) anyerror!void;
+pub const MakeFunction = *const fn(*Args) anyerror!void;
+pub const Args = struct {
+    step: *std.Build.Step,
+    name: []const u8,
+    ctx: ?*anyopaque = null,
+    man: *std.Build.Cache.Manifest,
+};
+
 pub const Options = struct {
     name: ?[]const u8 = "",
     cacheFunc: CacheFunction,
@@ -22,7 +29,7 @@ pub fn init(b: *std.Build, opt: Options) *FunctionStep {
         .step = std.Build.Step.init(.{
             .owner = b,
             .makeFn = make,
-            .name = opt.name orelse "func",
+            .name = opt.name orelse "FunctionStep",
             .id = .custom,
         }),
         .cacheFunc = opt.cacheFunc,
@@ -39,14 +46,18 @@ fn make(step: *std.Build.Step, prog_node: std.Progress.Node) anyerror!void {
     defer man.deinit();
 
     prog_node.setEstimatedTotalItems(1);
-    try self.cacheFunc(&man, self.ctx);
+    var args: Args = .{
+        .step = step,
+        .ctx = self.ctx,
+        .name = self.step.name,
+        .man = &man,
+    }; 
+    try self.cacheFunc(&args);
     if (try step.cacheHit(&man)) {
         std.debug.print("CACHED: {any}\n", .{self.ctx});
     } else {
-        try self.makeFunc(&man, self);
+        try self.makeFunc(&args);
         try man.writeManifest();
-        std.debug.print("WOLOLO: {x}\n", .{std.fmt.fmtSliceHexLower(&man.final())});
-        std.debug.print("WOLOLO: {x}\n", .{std.fmt.fmtSliceHexLower(&man.final())});
     }
     prog_node.completeOne();
 }
