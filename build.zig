@@ -30,9 +30,11 @@ pub fn build(b: *std.Build) void {
 pub fn addLibGitBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
     if (b.lazyDependency("libgit2", defaults)) |dep| {
         libgit2.build(dep.builder);
-        b.getInstallStep().dependOn(&b.addInstallArtifact(dep.artifact("git2"), .{
+        const git2_exe = b.addInstallArtifact(dep.artifact("git2"), .{
             .dest_sub_path = "git2",
-        }).step);
+        });
+        b.getInstallStep().dependOn(&git2_exe.step);
+        b.step("git2", "build the git2 exe").dependOn(&git2_exe.step);
     }
 }
 
