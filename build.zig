@@ -5,12 +5,18 @@
 
 const meta_allyourcode = @This();
 const std = @import("std");
+const FunctionStep = @import("src/FunctionStep.zig");
 
 pub fn build(b: *std.Build) void {
     const defaults: DefaultBuildOptions = .{
         .target = b.standardTargetOptions(.{}),
         .optimize = b.standardOptimizeOption(.{}),
     };
+    const func = FunctionStep.init(b, .{
+        .makeFunc = testFunction,
+        .cacheFunc = testFunction,
+    });
+    b.step("func", "").dependOn(&func.step);
 
     if (b.option(
         []const u8,
@@ -83,6 +89,12 @@ pub const DefaultBuildOptions = struct {
     optimize: std.builtin.OptimizeMode,
     @"test": u8 = 0,
 };
+
+fn testFunction(man: *std.Build.Cache.Manifest, ctx: ?*anyopaque) anyerror!void{
+    _ = ctx;
+    var rand = std.Random.DefaultPrng.init(@as(u64, @bitCast(std.time.milliTimestamp())));
+    man.hash.add(rand.random().int(u64));
+}
 
 pub const lazy = struct {
     pub fn dependency(b: *std.Build, name: []const u8, args: anytype) ?*std.Build.Dependency {
