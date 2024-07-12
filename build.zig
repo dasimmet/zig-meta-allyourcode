@@ -51,9 +51,11 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
 
     if (b.lazyDependency("cmake", cmake_options)) |dep| {
         cmake.build(dep.builder);
-        b.getInstallStep().dependOn(&b.addInstallArtifact(dep.artifact("bootstrap"), .{
+        const cmake_exe = b.addInstallArtifact(dep.artifact("bootstrap"), .{
             .dest_sub_path = "cmake",
-        }).step);
+        });
+        b.getInstallStep().dependOn(&cmake_exe.step);
+        b.step("cmake", "build the cmake exe").dependOn(&cmake_exe.step);
     }
 }
 
