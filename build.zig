@@ -90,15 +90,17 @@ pub const DefaultBuildOptions = struct {
     @"test": u8 = 0,
 };
 
-fn cacheFunction(args: *FunctionStep.Args) anyerror!void{
+fn cacheFunction(args: *FunctionStep.Args) anyerror!void {
     var rand = std.Random.DefaultPrng.init(@as(u64, @bitCast(std.time.milliTimestamp())));
     args.man.hash.add(rand.random().int(u64));
 }
 
-fn makeFunction(args: *FunctionStep.Args) anyerror!void{
-    const hash = args.man.final();
-    std.debug.print("WOLOLO: {x}\n", .{std.fmt.fmtSliceHexLower(&hash)});
-    std.debug.print("WOLOLO: {x}\n", .{std.fmt.fmtSliceHexLower(&hash)});
+fn makeFunction(args: *FunctionStep.Args) anyerror!void {
+    std.debug.print("NOT CACHED:{s}\nLOCAL:{s}\nGLOBAL:{s}\n", .{
+        args.globalDir(),
+        args.hash.path.?,
+        args.globalDir(),
+    });
 }
 
 pub const lazy = struct {
