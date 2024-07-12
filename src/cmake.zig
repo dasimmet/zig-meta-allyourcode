@@ -24,9 +24,23 @@ pub fn build(b: *std.Build) void {
     bs.defineCMacro("KWSYS_NAMESPACE", "cmsys");
     // cmake
     bs.defineCMacro("_FILE_OFFSET_BITS", "64");
-    bs.defineCMacro("CMAKE_BOOTSTRAP_BINARY_DIR", b.install_path);
-    bs.defineCMacro("CMAKE_BOOTSTRAP_SOURCE_DIR", b.pathFromRoot(""));
     bs.defineCMacro("CMAKE_BOOTSTRAP", null);
+    bs.defineCMacro(
+        "CMAKE_BOOTSTRAP_BINARY_DIR",
+        std.mem.join(
+            b.allocator,
+            "",
+            &.{ "\"", b.install_path, "\"" },
+        ) catch @panic("OOM"),
+    );
+    bs.defineCMacro(
+        "CMAKE_BOOTSTRAP_SOURCE_DIR",
+        std.mem.join(
+            b.allocator,
+            "",
+            &.{ "\"", b.install_path, "\"" },
+        ) catch @panic("OOM"),
+    );
     bs.defineCMacro("CMake_HAVE_CXX_MAKE_UNIQUE", "1");
     bs.defineCMacro("CMake_HAVE_CXX_FILESYSTEM", "1");
 
