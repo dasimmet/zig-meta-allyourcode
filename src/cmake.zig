@@ -8,20 +8,11 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const cmConfigure = cmConfig.configHeader(b, null);
-    // const cmConfigure = b.addConfigHeader(.{ .include_path = "cmConfigure.h", .style = .{
-    //     .cmake = b.path("Source/cmConfigure.cmake.h.in"),
-    // } }, .{
-    //     .CURL_CA_BUNDLE = "",
-    //     .CURL_CA_PATH = "",
-    //     .KWSYS_ENCODING_DEFAULT_CODEPAGE = "CP_UTF8",
-    //     .CMake_DEFAULT_RECURSION_LIMIT = 400,
-    //     .CMAKE_BIN_DIR = "/bootstrap-not-installed",
-    //     .CMAKE_DATA_DIR = "/bootstrap-not-installed",
-    // });
-
     const generated_headers = b.addWriteFiles();
-    _ = generated_headers.addCopyFile(cmConfigure.getOutput(), cmConfigure.include_path);
+    inline for (.{ cmConfig, cmSysConfig, cmSysConfigPP }) |configH| {
+        const cmConfigure = configH.configHeader(b, null);
+        _ = generated_headers.addCopyFile(cmConfigure.getOutput(), cmConfigure.include_path);
+    }
 
     const bs = b.addExecutable(.{
         .name = "bootstrap",
@@ -361,6 +352,37 @@ pub const cmConfig = struct {
     pub fn configHeader(b: *std.Build, opt: ?type) *std.Build.Step.ConfigHeader {
         return b.addConfigHeader(.{ .include_path = "cmConfigure.h", .style = .{
             .cmake = b.path("Source/cmConfigure.cmake.h.in"),
+        } }, opt orelse defaults);
+    }
+};
+
+pub const cmSysConfigPP = struct {
+    pub const defaults = .{
+        .KWSYS_NAMESPACE = "cmsys",
+        .KWSYS_NAME_IS_KWSYS = 0,
+        .KWSYS_BUILD_SHARED = 0,
+        .KWSYS_LFS_AVAILABLE = 0,
+        .KWSYS_LFS_REQUESTED = 0,
+        .KWSYS_STL_HAS_WSTRING = 0,
+        .KWSYS_CXX_HAS_EXT_STDIO_FILEBUF_H = 0,
+        .KWSYS_CXX_HAS_SETENV = 0,
+        .KWSYS_CXX_HAS_UNSETENV = 0,
+        .KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H = 0,
+        .KWSYS_CXX_HAS_UTIMENSAT = 0,
+        .KWSYS_CXX_HAS_UTIMES = 0,
+        .KWSYS_SYSTEMTOOLS_USE_TRANSLATION_MAP = 1,
+    };
+    pub fn configHeader(b: *std.Build, opt: ?type) *std.Build.Step.ConfigHeader {
+        return b.addConfigHeader(.{ .include_path = "cmsys/Configure.hxx", .style = .{
+            .cmake = b.path("Source/kwsys/Configure.hxx.in"),
+        } }, opt orelse defaults);
+    }
+};
+pub const cmSysConfig = struct {
+    pub const defaults = cmSysConfigPP.defaults;
+    pub fn configHeader(b: *std.Build, opt: ?type) *std.Build.Step.ConfigHeader {
+        return b.addConfigHeader(.{ .include_path = "cmsys/Configure.h", .style = .{
+            .cmake = b.path("Source/kwsys/Configure.h.in"),
         } }, opt orelse defaults);
     }
 };
