@@ -13,18 +13,15 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    bs.bundle_compiler_rt = true;
     bs.linkLibC();
     bs.linkLibCpp();
-    // librhash
-    bs.defineCMacro("NO_IMPORT_EXPORT", null);
     // kwsys
-    bs.defineCMacro("_GNU_SOURCE", null);
     bs.defineCMacro("KWSYS_STRING_C", null);
     bs.defineCMacro("KWSYS_NAMESPACE", "cmsys");
     // cmake
-    bs.defineCMacro("_FILE_OFFSET_BITS", "64");
+    // bs.defineCMacro("_FILE_OFFSET_BITS", "64");
     bs.defineCMacro("CMAKE_BOOTSTRAP", null);
+    bs.defineCMacro("CMAKE_BOOTSTRAP_MAKEFILES", null);
     bs.defineCMacro(
         "CMAKE_BOOTSTRAP_BINARY_DIR",
         std.mem.join(
@@ -46,22 +43,25 @@ pub fn build(b: *std.Build) void {
 
     const generated_headers = cmBootstrapHeaders(b);
     bs.addIncludePath(generated_headers);
-    bs.addIncludePath(b.path("build/bootstrap/Bootstrap.cmk"));
-    bs.addIncludePath(b.path("Utilities"));
-    bs.addIncludePath(b.path("Utilities/std"));
-    bs.addIncludePath(b.path("Utilities/cmlibuv/src"));
-    bs.addIncludePath(b.path("Utilities/cmlibuv/include"));
-    bs.addIncludePath(b.path("Utilities/cmlibrhash/librhash"));
+    bs.addIncludePath(generated_headers.path(b, "cmsys"));
     bs.addIncludePath(b.path("Source"));
     bs.addIncludePath(b.path("Source/LexerParser"));
+    bs.addIncludePath(b.path("Utilities"));
+    bs.addIncludePath(b.path("Utilities/cmjsoncpp/include"));
+    bs.addIncludePath(b.path("Utilities/cmlibrhash/librhash"));
+    bs.addIncludePath(b.path("Utilities/cmlibuv/include"));
+    bs.addIncludePath(b.path("Utilities/cmlibuv/src"));
+    bs.addIncludePath(b.path("Utilities/std"));
 
     bs.addCSourceFiles(.{
         .files = LIBUV_C_SOURCES,
         .root = b.path("Utilities/cmlibuv"),
+        .flags = &.{"-D_GNU_SOURCE"},
     });
     bs.addCSourceFiles(.{
         .files = LIBRHASH_C_SOURCES,
         .root = b.path("Utilities/cmlibrhash"),
+        .flags = &.{"-DNO_IMPORT_EXPORT"},
     });
     bs.addCSourceFiles(.{
         .files = CMAKE_CXX_SOURCES,
@@ -108,6 +108,7 @@ const LIBRHASH_C_SOURCES = &.{
 };
 
 const CMAKE_CXX_SOURCES = &.{
+    "cm_fileno.cxx",
     "cmAddCompileDefinitionsCommand.cxx",
     "cmAddCustomCommandCommand.cxx",
     "cmAddCustomTargetCommand.cxx",
@@ -117,6 +118,8 @@ const CMAKE_CXX_SOURCES = &.{
     "cmAddLibraryCommand.cxx",
     "cmAddSubDirectoryCommand.cxx",
     "cmAddTestCommand.cxx",
+    "cmake.cxx",
+    "cmakemain.cxx",
     "cmArgumentParser.cxx",
     "cmBinUtilsLinker.cxx",
     "cmBinUtilsLinuxELFGetRuntimeDependenciesTool.cxx",
@@ -125,21 +128,20 @@ const CMAKE_CXX_SOURCES = &.{
     "cmBinUtilsMacOSMachOGetRuntimeDependenciesTool.cxx",
     "cmBinUtilsMacOSMachOLinker.cxx",
     "cmBinUtilsMacOSMachOOToolGetRuntimeDependenciesTool.cxx",
-    "cmBinUtilsWindowsPEGetRuntimeDependenciesTool.cxx",
     "cmBinUtilsWindowsPEDumpbinGetRuntimeDependenciesTool.cxx",
+    "cmBinUtilsWindowsPEGetRuntimeDependenciesTool.cxx",
     "cmBinUtilsWindowsPELinker.cxx",
     "cmBinUtilsWindowsPEObjdumpGetRuntimeDependenciesTool.cxx",
     "cmBlockCommand.cxx",
     "cmBreakCommand.cxx",
     "cmBuildCommand.cxx",
+    "cmCacheManager.cxx",
     "cmCMakeLanguageCommand.cxx",
     "cmCMakeMinimumRequired.cxx",
-    "cmList.cxx",
     "cmCMakePath.cxx",
     "cmCMakePathCommand.cxx",
     "cmCMakePolicyCommand.cxx",
-    "cmCPackPropertiesGenerator.cxx",
-    "cmCacheManager.cxx",
+    "cmcmd.cxx",
     "cmCommand.cxx",
     "cmCommandArgumentParserHelper.cxx",
     "cmCommands.cxx",
@@ -148,11 +150,12 @@ const CMAKE_CXX_SOURCES = &.{
     "cmComputeLinkDepends.cxx",
     "cmComputeLinkInformation.cxx",
     "cmComputeTargetDepends.cxx",
-    "cmConsoleBuf.cxx",
     "cmConditionEvaluator.cxx",
     "cmConfigureFileCommand.cxx",
+    "cmConsoleBuf.cxx",
     "cmContinueCommand.cxx",
     "cmCoreTryCompile.cxx",
+    "cmCPackPropertiesGenerator.cxx",
     "cmCreateTestSourceList.cxx",
     "cmCryptoHash.cxx",
     "cmCustomCommand.cxx",
@@ -162,6 +165,9 @@ const CMAKE_CXX_SOURCES = &.{
     "cmCxxModuleUsageEffects.cxx",
     "cmDefinePropertyCommand.cxx",
     "cmDefinitions.cxx",
+    "cmDepends.cxx",
+    "cmDependsC.cxx",
+    "cmDependsCompiler.cxx",
     "cmDocumentationFormatter.cxx",
     "cmELF.cxx",
     "cmEnableLanguageCommand.cxx",
@@ -178,8 +184,8 @@ const CMAKE_CXX_SOURCES = &.{
     "cmExportTryCompileFileGenerator.cxx",
     "cmExprParserHelper.cxx",
     "cmExternalMakefileProjectGenerator.cxx",
-    "cmFileCommand.cxx",
     "cmFileCommand_ReadMacho.cxx",
+    "cmFileCommand.cxx",
     "cmFileCopier.cxx",
     "cmFileInstaller.cxx",
     "cmFileSet.cxx",
@@ -195,9 +201,11 @@ const CMAKE_CXX_SOURCES = &.{
     "cmFindPathCommand.cxx",
     "cmFindProgramCommand.cxx",
     "cmForEachCommand.cxx",
+    "cmFSPermissions.cxx",
     "cmFunctionBlocker.cxx",
     "cmFunctionCommand.cxx",
-    "cmFSPermissions.cxx",
+    "cmGccDepfileLexerHelper.cxx",
+    "cmGccDepfileReader.cxx",
     "cmGeneratedFileStream.cxx",
     "cmGeneratorExpression.cxx",
     "cmGeneratorExpressionContext.cxx",
@@ -207,7 +215,6 @@ const CMAKE_CXX_SOURCES = &.{
     "cmGeneratorExpressionLexer.cxx",
     "cmGeneratorExpressionNode.cxx",
     "cmGeneratorExpressionParser.cxx",
-    "cmGeneratorTarget.cxx",
     "cmGeneratorTarget_CompatibleInterface.cxx",
     "cmGeneratorTarget_IncludeDirectories.cxx",
     "cmGeneratorTarget_Link.cxx",
@@ -216,6 +223,7 @@ const CMAKE_CXX_SOURCES = &.{
     "cmGeneratorTarget_Sources.cxx",
     "cmGeneratorTarget_TargetPropertyEntry.cxx",
     "cmGeneratorTarget_TransitiveProperty.cxx",
+    "cmGeneratorTarget.cxx",
     "cmGetCMakePropertyCommand.cxx",
     "cmGetDirectoryPropertyCommand.cxx",
     "cmGetFilenameComponentCommand.cxx",
@@ -226,21 +234,23 @@ const CMAKE_CXX_SOURCES = &.{
     "cmGetTestPropertyCommand.cxx",
     "cmGlobalCommonGenerator.cxx",
     "cmGlobalGenerator.cxx",
+    "cmGlobalUnixMakefileGenerator3.cxx",
     "cmGlobVerificationManager.cxx",
     "cmHexFileConverter.cxx",
     "cmIfCommand.cxx",
     "cmImportedCxxModuleInfo.cxx",
     "cmIncludeCommand.cxx",
-    "cmIncludeGuardCommand.cxx",
     "cmIncludeDirectoryCommand.cxx",
+    "cmIncludeGuardCommand.cxx",
     "cmIncludeRegularExpressionCommand.cxx",
     "cmInstallCommand.cxx",
     "cmInstallCommandArguments.cxx",
     "cmInstallCxxModuleBmiGenerator.cxx",
     "cmInstallDirectoryGenerator.cxx",
+    "cmInstalledFile.cxx",
     "cmInstallExportGenerator.cxx",
-    "cmInstallFileSetGenerator.cxx",
     "cmInstallFilesCommand.cxx",
+    "cmInstallFileSetGenerator.cxx",
     "cmInstallFilesGenerator.cxx",
     "cmInstallGenerator.cxx",
     "cmInstallGetRuntimeDependenciesGenerator.cxx",
@@ -251,7 +261,6 @@ const CMAKE_CXX_SOURCES = &.{
     "cmInstallSubdirectoryGenerator.cxx",
     "cmInstallTargetGenerator.cxx",
     "cmInstallTargetsCommand.cxx",
-    "cmInstalledFile.cxx",
     "cmJSONHelpers.cxx",
     "cmJSONState.cxx",
     "cmLDConfigLDConfigTool.cxx",
@@ -261,36 +270,40 @@ const CMAKE_CXX_SOURCES = &.{
     "cmLinkItemGraphVisitor.cxx",
     "cmLinkLineComputer.cxx",
     "cmLinkLineDeviceComputer.cxx",
+    "cmList.cxx",
     "cmListCommand.cxx",
     "cmListFileCache.cxx",
     "cmLocalCommonGenerator.cxx",
     "cmLocalGenerator.cxx",
-    "cmMSVC60LinkLineComputer.cxx",
+    "cmLocalUnixMakefileGenerator3.cxx",
     "cmMacroCommand.cxx",
     "cmMakeDirectoryCommand.cxx",
     "cmMakefile.cxx",
+    "cmMakefileExecutableTargetGenerator.cxx",
+    "cmMakefileLibraryTargetGenerator.cxx",
+    "cmMakefileTargetGenerator.cxx",
+    "cmMakefileUtilityTargetGenerator.cxx",
     "cmMarkAsAdvancedCommand.cxx",
     "cmMathCommand.cxx",
     "cmMessageCommand.cxx",
     "cmMessenger.cxx",
+    "cmMSVC60LinkLineComputer.cxx",
     "cmNewLineStyle.cxx",
-    "cmOSXBundleGenerator.cxx",
     "cmOptionCommand.cxx",
     "cmOrderDirectories.cxx",
+    "cmOSXBundleGenerator.cxx",
     "cmOutputConverter.cxx",
     "cmParseArgumentsCommand.cxx",
     "cmPathLabel.cxx",
-    "cmPolicies.cxx",
-    "cmProcessOutput.cxx",
-    "cmProjectCommand.cxx",
-    "cmValue.cxx",
-    "cmPropertyDefinition.cxx",
-    "cmPropertyMap.cxx",
-    "cmGccDepfileLexerHelper.cxx",
-    "cmGccDepfileReader.cxx",
-    "cmReturnCommand.cxx",
     "cmPlaceholderExpander.cxx",
     "cmPlistParser.cxx",
+    "cmPolicies.cxx",
+    "cmProcessOutput.cxx",
+    "cmProcessTools.cxx",
+    "cmProjectCommand.cxx",
+    "cmPropertyDefinition.cxx",
+    "cmPropertyMap.cxx",
+    "cmReturnCommand.cxx",
     "cmRulePlaceholderExpander.cxx",
     "cmRuntimeDependencyArchive.cxx",
     "cmScriptGenerator.cxx",
@@ -311,8 +324,8 @@ const CMAKE_CXX_SOURCES = &.{
     "cmStateSnapshot.cxx",
     "cmString.cxx",
     "cmStringAlgorithms.cxx",
-    "cmStringReplaceHelper.cxx",
     "cmStringCommand.cxx",
+    "cmStringReplaceHelper.cxx",
     "cmSubcommandTable.cxx",
     "cmSubdirCommand.cxx",
     "cmSystemTools.cxx",
@@ -337,15 +350,12 @@ const CMAKE_CXX_SOURCES = &.{
     "cmUnsetCommand.cxx",
     "cmUVHandlePtr.cxx",
     "cmUVProcessChain.cxx",
+    "cmValue.cxx",
     "cmVersion.cxx",
     "cmWhileCommand.cxx",
     "cmWindowsRegistry.cxx",
     "cmWorkingDirectory.cxx",
     "cmXcFramework.cxx",
-    "cmake.cxx",
-    "cmakemain.cxx",
-    "cmcmd.cxx",
-    "cm_fileno.cxx",
 };
 
 pub fn cmBootstrapHeaders(b: *std.Build) std.Build.LazyPath {
@@ -361,35 +371,42 @@ pub fn cmBootstrapHeaders(b: *std.Build) std.Build.LazyPath {
 }
 
 pub const kwSysConfig = struct {
-    pub const defaults = .{
-        .CMAKE_BIN_DIR = "/bootstrap-not-installed",
-        .CMAKE_DATA_DIR = "/bootstrap-not-installed",
-        .CMake_DEFAULT_RECURSION_LIMIT = 400,
-        .CMAKE_DOC_DIR = "DOC",
-        .CMake_VERSION = "0.0.0-bootstrap",
-        .CMake_VERSION_IS_DIRTY = 1,
-        .CMake_VERSION_MAJOR = 0,
-        .CMake_VERSION_MINOR = 0,
-        .CMake_VERSION_PATCH = 0,
-        .CMake_VERSION_SUFFIX = "bootstrap",
-        .CURL_CA_BUNDLE = "",
-        .CURL_CA_PATH = "",
-        .KWSYS_BUILD_SHARED = 0,
-        .KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H = 0,
-        .KWSYS_CXX_HAS_EXT_STDIO_FILEBUF_H = 0,
-        .KWSYS_CXX_HAS_SETENV = 0,
-        .KWSYS_CXX_HAS_UNSETENV = 0,
-        .KWSYS_CXX_HAS_UTIMENSAT = 0,
-        .KWSYS_CXX_HAS_UTIMES = 0,
-        .KWSYS_ENCODING_DEFAULT_CODEPAGE = "CP_UTF8",
-        .KWSYS_LFS_AVAILABLE = 0,
-        .KWSYS_LFS_REQUESTED = 0,
-        .KWSYS_NAME_IS_KWSYS = 0,
-        .KWSYS_NAMESPACE = "cmsys",
-        .KWSYS_STL_HAS_WSTRING = 0,
-        .KWSYS_SYSTEMTOOLS_USE_TRANSLATION_MAP = 1,
+    pub const defaults = struct {
+        _FILE_OFFSET_BITS: u16 = 64,
+        CMAKE_BIN_DIR: []const u8 = "/bootstrap-not-installed",
+        CMAKE_DATA_DIR: []const u8 = "/bootstrap-not-installed",
+        CMake_DEFAULT_RECURSION_LIMIT: u16 = 400,
+        CMAKE_DOC_DIR: []const u8 = "DOC",
+        CMake_VERSION: []const u8 = "0.0.0-bootstrap",
+        CMake_VERSION_IS_DIRTY: u16 = 1,
+        CMake_VERSION_MAJOR: u16 = 0,
+        CMake_VERSION_MINOR: u16 = 0,
+        CMake_VERSION_PATCH: u16 = 0,
+        CMake_VERSION_SUFFIX: []const u8 = "bootstrap",
+        CURL_CA_BUNDLE: []const u8 = "",
+        CURL_CA_PATH: []const u8 = "",
+        KWSYS_BUILD_SHARED: u16 = 0,
+        KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H: u16 = 0,
+        KWSYS_CXX_HAS_EXT_STDIO_FILEBUF_H: u16 = 0,
+        KWSYS_CXX_HAS_SETENV: u16 = 0,
+        KWSYS_CXX_HAS_UNSETENV: u16 = 0,
+        KWSYS_CXX_HAS_UTIMENSAT: u16 = 0,
+        KWSYS_CXX_HAS_UTIMES: u16 = 0,
+        KWSYS_ENCODING_DEFAULT_CODEPAGE: []const u8 = "CP_UTF8",
+        KWSYS_LFS_AVAILABLE: u16 = 0,
+        KWSYS_LFS_REQUESTED: u16 = 0,
+        KWSYS_NAME_IS_KWSYS: u16 = 0,
+        KWSYS_NAMESPACE: []const u8 = "cmsys",
+        KWSYS_STL_HAS_WSTRING: u16 = 0,
+        KWSYS_SYSTEMTOOLS_USE_TRANSLATION_MAP: u16 = 1,
     };
     pub fn configHeaders(b: *std.Build) []*std.Build.Step.ConfigHeader {
+        var opts = defaults{};
+        inline for (@typeInfo(defaults).Struct.fields) |f| {
+            if (b.option(f.type, f.name, f.name ++ " - cmake option")) |opt| {
+                @field(opts, f.name) = opt;
+            }
+        }
         var acc = std.ArrayList(*std.Build.Step.ConfigHeader).init(b.allocator);
         inline for (.{
             .{ "Source/cmConfigure.cmake.h.in", "cmConfigure.h" },
@@ -421,7 +438,7 @@ pub const kwSysConfig = struct {
             acc.append(b.addConfigHeader(.{
                 .include_path = tpl[1],
                 .style = .{ .cmake = b.path(tpl[0]) },
-            }, defaults)) catch @panic("OOM");
+            }, opts)) catch @panic("OOM");
         }
         return acc.toOwnedSlice() catch @panic("OOM");
     }
