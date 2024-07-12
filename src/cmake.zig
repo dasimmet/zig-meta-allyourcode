@@ -8,12 +8,6 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const generated_headers = b.addWriteFiles();
-    inline for (.{ cmConfig, cmSysConfig, cmSysConfigPP }) |configH| {
-        const cmConfigure = configH.configHeader(b, null);
-        _ = generated_headers.addCopyFile(cmConfigure.getOutput(), cmConfigure.include_path);
-    }
-
     const bs = b.addExecutable(.{
         .name = "bootstrap",
         .target = target,
@@ -30,13 +24,14 @@ pub fn build(b: *std.Build) void {
     bs.defineCMacro("KWSYS_NAMESPACE", "cmsys");
     // cmake
     bs.defineCMacro("_FILE_OFFSET_BITS", "64");
+    bs.defineCMacro("CMAKE_BOOTSTRAP_BINARY_DIR", b.install_path);
+    bs.defineCMacro("CMAKE_BOOTSTRAP_SOURCE_DIR", b.pathFromRoot(""));
     bs.defineCMacro("CMAKE_BOOTSTRAP", null);
     bs.defineCMacro("CMake_HAVE_CXX_MAKE_UNIQUE", "1");
     bs.defineCMacro("CMake_HAVE_CXX_FILESYSTEM", "1");
 
-    bs.addIncludePath(.{ .generated = .{
-        .file = &generated_headers.generated_directory,
-    } });
+    const generated_headers = cmBootstrapHeaders(b);
+    bs.addIncludePath(generated_headers);
     bs.addIncludePath(b.path("build/bootstrap/Bootstrap.cmk"));
     bs.addIncludePath(b.path("Utilities"));
     bs.addIncludePath(b.path("Utilities/std"));
@@ -339,50 +334,81 @@ const CMAKE_CXX_SOURCES = &.{
     "cm_fileno.cxx",
 };
 
-pub const cmConfig = struct {
+pub fn cmBootstrapHeaders(b: *std.Build) std.Build.LazyPath {
+    const generated_headers = b.addWriteFiles();
+    for (kwSysConfig.configHeaders(b)) |h| {
+        _ = generated_headers.addCopyFile(h.getOutput(), h.include_path);
+    }
+    return .{
+        .generated = .{
+            .file = &generated_headers.generated_directory,
+        },
+    };
+}
+
+pub const kwSysConfig = struct {
     pub const defaults = .{
-        .CURL_CA_BUNDLE = "",
-        .CURL_CA_PATH = "",
-        .KWSYS_ENCODING_DEFAULT_CODEPAGE = "CP_UTF8",
-        .CMake_DEFAULT_RECURSION_LIMIT = 400,
         .CMAKE_BIN_DIR = "/bootstrap-not-installed",
         .CMAKE_DATA_DIR = "/bootstrap-not-installed",
+        .CMake_DEFAULT_RECURSION_LIMIT = 400,
         .CMAKE_DOC_DIR = "DOC",
-    };
-    pub fn configHeader(b: *std.Build, opt: ?type) *std.Build.Step.ConfigHeader {
-        return b.addConfigHeader(.{ .include_path = "cmConfigure.h", .style = .{
-            .cmake = b.path("Source/cmConfigure.cmake.h.in"),
-        } }, opt orelse defaults);
-    }
-};
-
-pub const cmSysConfigPP = struct {
-    pub const defaults = .{
-        .KWSYS_NAMESPACE = "cmsys",
-        .KWSYS_NAME_IS_KWSYS = 0,
+        .CMake_VERSION = "0.0.0-bootstrap",
+        .CMake_VERSION_IS_DIRTY = 1,
+        .CMake_VERSION_MAJOR = 0,
+        .CMake_VERSION_MINOR = 0,
+        .CMake_VERSION_PATCH = 0,
+        .CMake_VERSION_SUFFIX = "bootstrap",
+        .CURL_CA_BUNDLE = "",
+        .CURL_CA_PATH = "",
         .KWSYS_BUILD_SHARED = 0,
-        .KWSYS_LFS_AVAILABLE = 0,
-        .KWSYS_LFS_REQUESTED = 0,
-        .KWSYS_STL_HAS_WSTRING = 0,
+        .KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H = 0,
         .KWSYS_CXX_HAS_EXT_STDIO_FILEBUF_H = 0,
         .KWSYS_CXX_HAS_SETENV = 0,
         .KWSYS_CXX_HAS_UNSETENV = 0,
-        .KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H = 0,
         .KWSYS_CXX_HAS_UTIMENSAT = 0,
         .KWSYS_CXX_HAS_UTIMES = 0,
+        .KWSYS_ENCODING_DEFAULT_CODEPAGE = "CP_UTF8",
+        .KWSYS_LFS_AVAILABLE = 0,
+        .KWSYS_LFS_REQUESTED = 0,
+        .KWSYS_NAME_IS_KWSYS = 0,
+        .KWSYS_NAMESPACE = "cmsys",
+        .KWSYS_STL_HAS_WSTRING = 0,
         .KWSYS_SYSTEMTOOLS_USE_TRANSLATION_MAP = 1,
     };
-    pub fn configHeader(b: *std.Build, opt: ?type) *std.Build.Step.ConfigHeader {
-        return b.addConfigHeader(.{ .include_path = "cmsys/Configure.hxx", .style = .{
-            .cmake = b.path("Source/kwsys/Configure.hxx.in"),
-        } }, opt orelse defaults);
-    }
-};
-pub const cmSysConfig = struct {
-    pub const defaults = cmSysConfigPP.defaults;
-    pub fn configHeader(b: *std.Build, opt: ?type) *std.Build.Step.ConfigHeader {
-        return b.addConfigHeader(.{ .include_path = "cmsys/Configure.h", .style = .{
-            .cmake = b.path("Source/kwsys/Configure.h.in"),
-        } }, opt orelse defaults);
+    pub fn configHeaders(b: *std.Build) []*std.Build.Step.ConfigHeader {
+        var acc = std.ArrayList(*std.Build.Step.ConfigHeader).init(b.allocator);
+        inline for (.{
+            .{ "Source/cmConfigure.cmake.h.in", "cmConfigure.h" },
+            .{ "Source/cmVersionConfig.h.in", "cmVersionConfig.h" },
+            .{ "Source/kwsys/Base64.h.in", "cmsys/Base64.h" },
+            .{ "Source/kwsys/CommandLineArguments.hxx.in", "cmsys/CommandLineArguments.hxx" },
+            .{ "Source/kwsys/Configure.h.in", "cmsys/Configure.h" },
+            .{ "Source/kwsys/Configure.hxx.in", "cmsys/Configure.hxx" },
+            .{ "Source/kwsys/ConsoleBuf.hxx.in", "cmsys/ConsoleBuf.hxx" },
+            .{ "Source/kwsys/Directory.hxx.in", "cmsys/Directory.hxx" },
+            .{ "Source/kwsys/Encoding.h.in", "cmsys/Encoding.h" },
+            .{ "Source/kwsys/Encoding.hxx.in", "cmsys/Encoding.hxx" },
+            .{ "Source/kwsys/FStream.hxx.in", "cmsys/FStream.hxx" },
+            .{ "Source/kwsys/Glob.hxx.in", "cmsys/Glob.hxx" },
+            .{ "Source/kwsys/MD5.h.in", "cmsys/MD5.h" },
+            .{ "Source/kwsys/Process.h.in", "cmsys/Process.h" },
+            .{ "Source/kwsys/RegularExpression.hxx.in", "cmsys/RegularExpression.hxx" },
+            .{ "Source/kwsys/Status.hxx.in", "cmsys/Status.hxx" },
+            .{ "Source/kwsys/String.h.in", "cmsys/String.h" },
+            .{ "Source/kwsys/System.h.in", "cmsys/System.h" },
+            .{ "Source/kwsys/SystemInformation.hxx.in", "cmsys/SystemInformation.hxx" },
+            .{ "Source/kwsys/SystemTools.hxx.in", "cmsys/SystemTools.hxx" },
+            .{ "Source/kwsys/Terminal.h.in", "cmsys/Terminal.h" },
+            .{ "Utilities/cmThirdParty.h.in", "cmThirdParty.h" },
+            .{ "Utilities/std/cmSTL.hxx.in", "cmSTL.hxx" },
+            // .{ "Source/kwsys/DynamicLoader.hxx.in", "cmsys/DynamicLoader.hxx" },
+            // .{ "Source/kwsys/testSystemTools.h.in", "cmsys/testSystemTools.h" },
+        }) |tpl| {
+            acc.append(b.addConfigHeader(.{
+                .include_path = tpl[1],
+                .style = .{ .cmake = b.path(tpl[0]) },
+            }, defaults)) catch @panic("OOM");
+        }
+        return acc.toOwnedSlice() catch @panic("OOM");
     }
 };
