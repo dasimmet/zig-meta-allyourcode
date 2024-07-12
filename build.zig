@@ -6,6 +6,7 @@
 const meta_allyourcode = @This();
 const std = @import("std");
 const cmake = @import("src/cmake.zig");
+const libgit2 = @import("src/libgit2.zig");
 const CMakeOptionsType: type = mergeStructFields(DefaultBuildOptions, cmake.ConfigHeaders.Options);
 
 pub fn build(b: *std.Build) void {
@@ -21,22 +22,36 @@ pub fn build(b: *std.Build) void {
     )) |d| {
         _ = b.lazyDependency(d, .{});
     } else {
-        var cmake_options: CMakeOptionsType = .{
-            .target = defaults.target,
-            .optimize = defaults.optimize,
-        };
-        inline for (@typeInfo(cmake.ConfigHeaders.Options).Struct.fields) |f| {
-            if (b.option(f.type, "CMAKE_" ++ f.name, "cmake - " ++ f.name)) |opt| {
-                @field(cmake_options, f.name) = opt;
-            }
-        }
+        addCmakeBuild(b, defaults);
+        addLibGitBuild(b, defaults);
+    }
+}
 
-        if (b.lazyDependency("cmake", cmake_options)) |cmake_dep| {
-            @import("src/cmake.zig").build(cmake_dep.builder);
-            b.getInstallStep().dependOn(&b.addInstallArtifact(cmake_dep.artifact("bootstrap"), .{
-                .dest_sub_path = "cmake",
-            }).step);
+pub fn addLibGitBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
+    if (b.lazyDependency("libgit2", defaults)) |dep| {
+        libgit2.build(dep.builder);
+        b.getInstallStep().dependOn(&b.addInstallArtifact(dep.artifact("git2"), .{
+            .dest_sub_path = "git2",
+        }).step);
+    }
+}
+
+pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
+    var cmake_options: CMakeOptionsType = .{
+        .target = defaults.target,
+        .optimize = defaults.optimize,
+    };
+    inline for (@typeInfo(cmake.ConfigHeaders.Options).Struct.fields) |f| {
+        if (b.option(f.type, "CMAKE_" ++ f.name, "cmake - " ++ f.name)) |opt| {
+            @field(cmake_options, f.name) = opt;
         }
+    }
+
+    if (b.lazyDependency("cmake", cmake_options)) |dep| {
+        cmake.build(dep.builder);
+        b.getInstallStep().dependOn(&b.addInstallArtifact(dep.artifact("bootstrap"), .{
+            .dest_sub_path = "cmake",
+        }).step);
     }
 }
 

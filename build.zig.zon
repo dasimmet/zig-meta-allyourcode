@@ -7,6 +7,11 @@
             .hash = "1220a3aa0d3cccc45c4c9c2d62775402404451b3c0d2bd6a5eb70435b05dfb76927c",
             .lazy = true,
         },
+        .libgit2 = .{
+            .url = "https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.1.tar.gz",
+            .hash = "12208db692747f305b79ecfb3ac69e691d0b9584383ec4bcb0eb07b62b73de77b1cf",
+            .lazy = true,
+        },
     },
     .paths = .{
         "build.zig",
