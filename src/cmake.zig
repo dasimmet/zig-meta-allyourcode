@@ -1,9 +1,5 @@
 const std = @import("std");
 
-// (
-//     rm -r build/bootstrap*
-//     mkdir -p build/bootstrap;cd build/bootstrap/;CC="zig cc" CXX="zig c++" MAKEFLAGS="-j8" ../../configure 2>&1 > ../bootstrap.log)
-
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -41,7 +37,7 @@ pub fn build(b: *std.Build) void {
     bs.defineCMacro("CMake_HAVE_CXX_MAKE_UNIQUE", "1");
     bs.defineCMacro("CMake_HAVE_CXX_FILESYSTEM", "1");
 
-    const generated_headers = cmBootstrapHeaders(b);
+    const generated_headers = ConfigHeaders.build(b);
     bs.addIncludePath(generated_headers);
     bs.addIncludePath(generated_headers.path(b, "cmsys"));
     bs.addIncludePath(b.path("Source"));
@@ -358,20 +354,8 @@ const CMAKE_CXX_SOURCES = &.{
     "cmXcFramework.cxx",
 };
 
-pub fn cmBootstrapHeaders(b: *std.Build) std.Build.LazyPath {
-    const generated_headers = b.addWriteFiles();
-    for (kwSysConfig.configHeaders(b)) |h| {
-        _ = generated_headers.addCopyFile(h.getOutput(), h.include_path);
-    }
-    return .{
-        .generated = .{
-            .file = &generated_headers.generated_directory,
-        },
-    };
-}
-
-pub const kwSysConfig = struct {
-    pub const defaults = struct {
+pub const ConfigHeaders = struct {
+    pub const Options = struct {
         _FILE_OFFSET_BITS: u16 = 64,
         CMAKE_BIN_DIR: []const u8 = "/bootstrap-not-installed",
         CMAKE_DATA_DIR: []const u8 = "/bootstrap-not-installed",
@@ -400,10 +384,22 @@ pub const kwSysConfig = struct {
         KWSYS_STL_HAS_WSTRING: u16 = 0,
         KWSYS_SYSTEMTOOLS_USE_TRANSLATION_MAP: u16 = 1,
     };
+
+    pub fn build(b: *std.Build) std.Build.LazyPath {
+        const generated_headers = b.addWriteFiles();
+        for (configHeaders(b)) |h| {
+            _ = generated_headers.addCopyFile(h.getOutput(), h.include_path);
+        }
+        return .{
+            .generated = .{
+                .file = &generated_headers.generated_directory,
+            },
+        };
+    }
     pub fn configHeaders(b: *std.Build) []*std.Build.Step.ConfigHeader {
-        var opts = defaults{};
-        inline for (@typeInfo(defaults).Struct.fields) |f| {
-            if (b.option(f.type, f.name, f.name ++ " - cmake option")) |opt| {
+        var opts = Options{};
+        inline for (@typeInfo(Options).Struct.fields) |f| {
+            if (b.option(f.type, f.name, f.name ++ " - cmake config header")) |opt| {
                 @field(opts, f.name) = opt;
             }
         }

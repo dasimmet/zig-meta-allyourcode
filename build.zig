@@ -6,22 +6,28 @@
 const meta_allyourcode = @This();
 const std = @import("std");
 const cmake = @import("src/cmake.zig");
+const CMakeOptionsType: type = mergeStructFields(DefaultBuildOptions, cmake.ConfigHeaders.Options);
 
 pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
-    _ = target;
-    _ = optimize;
+    const defaults: DefaultBuildOptions = .{
+        .target = b.standardTargetOptions(.{}),
+        .optimize = b.standardOptimizeOption(.{}),
+    };
+
     const dep_option = b.option([]const u8, "dependency", "the dependency to fetch");
     if (dep_option) |d| {
         _ = b.lazyDependency(d, .{});
     } else {
-        var cmake_options = cmake.kwSysConfig.defaults{};
-        inline for (@typeInfo(cmake.kwSysConfig.defaults).Struct.fields) |f| {
-            if (b.option(f.type, f.name, f.name ++ " - cmake")) |opt| {
+        var cmake_options: CMakeOptionsType = .{
+            .target = defaults.target,
+            .optimize = defaults.optimize,
+        };
+        inline for (@typeInfo(cmake.ConfigHeaders.Options).Struct.fields) |f| {
+            if (b.option(f.type, "CMAKE_" ++ f.name, "cmake - " ++ f.name)) |opt| {
                 @field(cmake_options, f.name) = opt;
             }
         }
+
         if (b.lazyDependency("cmake", cmake_options)) |cmake_dep| {
             @import("src/cmake.zig").build(cmake_dep.builder);
             b.getInstallStep().dependOn(&b.addInstallArtifact(cmake_dep.artifact("bootstrap"), .{
@@ -30,6 +36,31 @@ pub fn build(b: *std.Build) void {
         }
     }
 }
+
+pub fn mergeStructFields(ta: type, tb: type) type {
+    const typeinfo_a = @typeInfo(ta);
+    const typeinfo_b = @typeInfo(tb);
+    const fields_size = typeinfo_a.Struct.fields.len + typeinfo_b.Struct.fields.len;
+    var fields: [fields_size]std.builtin.Type.StructField = undefined;
+    inline for (typeinfo_a.Struct.fields, 0..) |f, i| {
+        fields[i] = f;
+    }
+    inline for (typeinfo_b.Struct.fields, typeinfo_a.Struct.fields.len..) |f, i| {
+        fields[i] = f;
+    }
+    return @Type(.{ .Struct = .{
+        .fields = &fields,
+        .layout = .auto,
+        .decls = &.{},
+        .is_tuple = false,
+    } });
+}
+
+pub const DefaultBuildOptions = struct {
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    @"test": u8 = 0,
+};
 
 pub const lazy = struct {
     pub fn dependency(b: *std.Build, name: []const u8, args: anytype) ?*std.Build.Dependency {
