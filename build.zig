@@ -14,8 +14,11 @@ pub fn build(b: *std.Build) void {
         .optimize = b.standardOptimizeOption(.{}),
     };
 
-    const dep_option = b.option([]const u8, "dependency", "the dependency to fetch");
-    if (dep_option) |d| {
+    if (b.option(
+        []const u8,
+        "dependency",
+        "use this option to fetch a single named transitive dependency",
+    )) |d| {
         _ = b.lazyDependency(d, .{});
     } else {
         var cmake_options: CMakeOptionsType = .{
