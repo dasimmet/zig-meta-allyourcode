@@ -24,11 +24,6 @@ pub fn build(b: *std.Build) void {
     bs.addIncludePath(b.path("Utilities/std"));
 
     bs.addCSourceFiles(.{
-        .files = LIBRHASH_C_SOURCES,
-        .root = b.path("Utilities/cmlibrhash"),
-        .flags = &.{"-DNO_IMPORT_EXPORT"},
-    });
-    bs.addCSourceFiles(.{
         .files = CMAKE_CXX_SOURCES,
         .root = b.path("Source"),
     });
@@ -43,16 +38,16 @@ pub fn build(b: *std.Build) void {
     });
     bs.linkLibrary(libuv);
     b.installArtifact(libuv);
+
+    const librhash = LibRHash.build(b, .{
+        .target = target,
+        .optimize = optimize,
+        .generated_headers = generated_headers,
+    });
+    bs.linkLibrary(librhash);
 }
 
 pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
-    // kwsys
-    comp.defineCMacro("KWSYS_STRING_C", null);
-    comp.defineCMacro("KWSYS_NAMESPACE", "cmsys");
-    // cmake
-    // comp.defineCMacro("_FILE_OFFSET_BITS", "64");
-    comp.defineCMacro("CMAKE_BOOTSTRAP", null);
-    comp.defineCMacro("CMAKE_BOOTSTRAP_MAKEFILES", null);
     comp.defineCMacro(
         "CMAKE_BOOTSTRAP_BINARY_DIR",
         std.mem.join(
@@ -69,8 +64,19 @@ pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
             &.{ "\"", b.install_path, "\"" },
         ) catch @panic("OOM"),
     );
-    comp.defineCMacro("CMake_HAVE_CXX_MAKE_UNIQUE", "1");
-    comp.defineCMacro("CMake_HAVE_CXX_FILESYSTEM", "1");
+    inline for (.{
+        // kwsys
+        .{ "KWSYS_STRING_C", null },
+        .{ "KWSYS_NAMESPACE", "cmsys" },
+        // cmake
+        // comp.defineCMacro("_FILE_OFFSET_BITS", "64");
+        .{ "CMAKE_BOOTSTRAP", null },
+        .{ "CMAKE_BOOTSTRAP_MAKEFILES", null },
+        .{ "CMake_HAVE_CXX_MAKE_UNIQUE", "1" },
+        .{ "CMake_HAVE_CXX_FILESYSTEM", "1" },
+    }) |macro| {
+        comp.defineCMacro(macro[0], macro[1]);
+    }
 }
 
 pub const LibUV = struct {
@@ -122,19 +128,39 @@ pub const LibUV = struct {
     };
 };
 
-const LIBRHASH_C_SOURCES = &.{
-    "librhash/algorithms.c",
-    "librhash/byte_order.c",
-    "librhash/hex.c",
-    "librhash/md5.c",
-    "librhash/rhash.c",
-    "librhash/sha1.c",
-    "librhash/sha256.c",
-    "librhash/sha3.c",
-    "librhash/sha512.c",
-    "librhash/util.c",
-};
+pub const LibRHash = struct {
+    const Self = @This();
+    pub fn build(b: *std.Build, opt: anytype) *std.Build.Step.Compile {
+        const librh = b.addStaticLibrary(.{
+            .name = "rhash",
+            .target = opt.target,
+            .optimize = opt.optimize,
+        });
+        librh.linkLibC();
+        librh.addIncludePath(opt.generated_headers);
+        librh.addCSourceFiles(.{
+            .files = Self.C_SOURCES,
+            .root = b.path("Utilities/cmlibrhash/librhash"),
+            .flags = &.{"-DNO_IMPORT_EXPORT"},
+        });
+        librh.addIncludePath(b.path("Utilities/cmlibrhash/librhash"));
+        librh.addIncludePath(b.path("Utilities"));
+        return librh;
+    }
 
+    pub const C_SOURCES = &.{
+        "algorithms.c",
+        "byte_order.c",
+        "hex.c",
+        "md5.c",
+        "rhash.c",
+        "sha1.c",
+        "sha256.c",
+        "sha3.c",
+        "sha512.c",
+        "util.c",
+    };
+};
 const CMAKE_CXX_SOURCES = &.{
     "cm_fileno.cxx",
     "cmAddCompileDefinitionsCommand.cxx",
@@ -420,13 +446,18 @@ pub const ConfigHeaders = struct {
     pub fn build(b: *std.Build) std.Build.LazyPath {
         const generated_headers = b.addWriteFiles();
         for (configHeaders(b)) |h| {
-            _ = generated_headers.addCopyFile(h.getOutput(), h.include_path);
+            const h_p = b.pathJoin(&.{
+                "generated_headers",
+                h.include_path,
+            });
+            _ = generated_headers.addCopyFile(h.getOutput(), h_p);
         }
-        return .{
+        const base_lp: std.Build.LazyPath = .{
             .generated = .{
                 .file = &generated_headers.generated_directory,
             },
         };
+        return base_lp.path(b, "generated_headers");
     }
     pub fn configHeaders(b: *std.Build) []*std.Build.Step.ConfigHeader {
         var opts = Options{};
