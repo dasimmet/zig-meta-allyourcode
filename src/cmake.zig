@@ -27,6 +27,10 @@ pub fn build(b: *std.Build) void {
         .files = CMAKE_CXX_SOURCES,
         .root = b.path("Source"),
     });
+    bs.addCSourceFiles(.{
+        .files = CMAKE_UTILITY_SOURCES,
+        .root = b.path("Utilities"),
+    });
     b.installArtifact(bs);
     const run = b.addRunArtifact(bs);
     b.step("run", "run").dependOn(&run.step);
@@ -45,6 +49,12 @@ pub fn build(b: *std.Build) void {
         .generated_headers = generated_headers,
     });
     bs.linkLibrary(librhash);
+    const kwsys = KwSys.build(b, .{
+        .target = target,
+        .optimize = optimize,
+        .generated_headers = generated_headers,
+    });
+    bs.linkLibrary(kwsys);
 }
 
 pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
@@ -66,10 +76,15 @@ pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
     );
     inline for (.{
         // kwsys
-        .{ "KWSYS_STRING_C", null },
+        .{ "KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H", "0" },
+        .{ "KWSYS_CXX_HAS_SETENV", "1" },
+        .{ "KWSYS_CXX_HAS_UNSETENV", "1" },
+        .{ "KWSYS_CXX_HAS_UTIMENSAT", "0" },
+        .{ "KWSYS_CXX_HAS_UTIMES", "0" },
         .{ "KWSYS_NAMESPACE", "cmsys" },
+        .{ "KWSYS_STRING_C", null },
         // cmake
-        // comp.defineCMacro("_FILE_OFFSET_BITS", "64");
+        .{ "_FILE_OFFSET_BITS", "64" },
         .{ "CMAKE_BOOTSTRAP", null },
         .{ "CMAKE_BOOTSTRAP_MAKEFILES", null },
         .{ "CMake_HAVE_CXX_MAKE_UNIQUE", "1" },
@@ -160,6 +175,66 @@ pub const LibRHash = struct {
         "sha512.c",
         "util.c",
     };
+};
+
+pub const KwSys = struct {
+    const Self = @This();
+    pub fn build(b: *std.Build, opt: anytype) *std.Build.Step.Compile {
+        const kwsys = b.addStaticLibrary(.{
+            .name = "kwsys",
+            .target = opt.target,
+            .optimize = opt.optimize,
+        });
+        kwsys.linkLibC();
+        kwsys.linkLibCpp();
+        addMacros(b, kwsys);
+        // inline for (.{
+        //     .{ "_FILE_OFFSET_BITS", "64" },
+        //     .{ "CMake_HAVE_CXX_MAKE_UNIQUE", "1" },
+        //     .{ "CMake_HAVE_CXX_FILESYSTEM", "1" },
+        //     .{ "KWSYS_CXX_HAS_SETENV", "1" },
+        //     .{ "KWSYS_CXX_HAS_UNSETENV", "1" },
+        //     .{ "KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H", "0" },
+        //     .{ "KWSYS_CXX_HAS_UTIMENSAT", "0" },
+        //     .{ "KWSYS_CXX_HAS_UTIMES", "0" },
+        //     .{ "KWSYS_NAMESPACE", "cmsys" },
+        // }) |m| {
+        //     kwsys.defineCMacro(m[0], m[1]);
+        // }
+        kwsys.addIncludePath(opt.generated_headers);
+        kwsys.addIncludePath(b.path("Source/kwsys"));
+        kwsys.addIncludePath(b.path("Utilities"));
+        kwsys.addIncludePath(b.path("Source"));
+        kwsys.addIncludePath(b.path("Source/LexerParser"));
+        kwsys.addIncludePath(b.path("Utilities/std"));
+        kwsys.addCSourceFiles(.{
+            .files = Self.CXX_SOURCES,
+            .root = b.path("Source/kwsys"),
+            .flags = &.{},
+        });
+        return kwsys;
+    }
+
+    pub const CXX_SOURCES = &.{
+        "Directory.cxx",
+        "EncodingCXX.cxx",
+        "FStream.cxx",
+        "Glob.cxx",
+        "RegularExpression.cxx",
+        "Status.cxx",
+        "SystemTools.cxx",
+        "EncodingC.c",
+        "ProcessUNIX.c",
+        "String.c",
+        "System.c",
+        "Terminal.c",
+    };
+};
+
+const CMAKE_UTILITY_SOURCES = &.{
+    "cmjsoncpp/src/lib_json/json_reader.cpp",
+    "cmjsoncpp/src/lib_json/json_value.cpp",
+    "cmjsoncpp/src/lib_json/json_writer.cpp",
 };
 const CMAKE_CXX_SOURCES = &.{
     "cm_fileno.cxx",
@@ -410,6 +485,12 @@ const CMAKE_CXX_SOURCES = &.{
     "cmWindowsRegistry.cxx",
     "cmWorkingDirectory.cxx",
     "cmXcFramework.cxx",
+    "LexerParser/cmListFileLexer.c",
+    "LexerParser/cmCommandArgumentLexer.cxx",
+    "LexerParser/cmCommandArgumentParser.cxx",
+    "LexerParser/cmExprLexer.cxx",
+    "LexerParser/cmExprParser.cxx",
+    "LexerParser/cmGccDepfileLexer.cxx",
 };
 
 pub const ConfigHeaders = struct {
