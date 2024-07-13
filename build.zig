@@ -28,6 +28,10 @@ pub fn build(b: *std.Build) void {
         addCmakeBuild(b, defaults);
         addLibGitBuild(b, defaults);
     }
+    const clean = b.addRemoveDirTree(b.cache_root.path.?);
+    b.step("clean","clean").dependOn(&clean.step);
+    const clean_glob = b.addRemoveDirTree(b.graph.global_cache_root.path.?);
+    b.step("clean-glob","clean").dependOn(&clean_glob.step);
 }
 
 pub fn addLibGitBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
