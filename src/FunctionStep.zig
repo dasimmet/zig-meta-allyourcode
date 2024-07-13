@@ -42,7 +42,7 @@ pub fn init(b: *std.Build, opt: Options) *FunctionStep {
         .cacheFunc = opt.cacheFunc,
         .makeFunc = opt.makeFunc,
         .ctx = opt.ctx,
-        .hash = .{.step = undefined},
+        .hash = .{ .step = undefined },
     };
     self.hash.step = &self.step;
     return self;

@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) void {
         .style = .{ .cmake = b.path("src/util/git2_features.h.in") },
     }, header_config);
     git_exe.addIncludePath(features_h.getOutput().dirname());
- 
+
     inline for (macros) |macro| {
         git_exe.defineCMacro(macro[0], macro[1]);
     }
@@ -63,29 +63,38 @@ pub fn build(b: *std.Build) void {
         .flags = &common_flags,
     });
 
-    const pcre_config_h = b.addConfigHeader(.{
-        .include_path = "configheader/config.h",
-        .style = .{ .cmake = b.path("deps/pcre/config.h.in") },
-    }, header_config);
-    inline for (pcre_files) |f| {
-        const bn = comptime std.fs.path.basename(f);
-        const obj = b.addObject(.{
-            .name = "pcre_"++bn,
-            .target = target,
-            .optimize = optimize,
-        });
-        obj.linkLibC();
-        obj.addCSourceFile(.{
-            .file = b.path("deps/pcre").path(b, f),
-            .flags = &common_flags,
-        });
-        inline for (macros) |macro| {
-            obj.defineCMacro(macro[0], macro[1]);
+    {
+        const pcre_config_h = b.addConfigHeader(.{
+            .include_path = "configheader/config.h",
+            .style = .{ .cmake = b.path("deps/pcre/config.h.in") },
+        }, header_config);
+        // // We cannot the sources directly, as the config.h import is taken
+        // git_exe.addIncludePath(pcre_config_h.getOutput().dirname());
+        // git_exe.addCSourceFiles(.{
+        //     .files = &pcre_files,
+        //     .root = b.path("deps/pcre"),
+        //     .flags = &common_flags,
+        // });
+        inline for (pcre_files) |f| {
+            const bn = comptime std.fs.path.basename(f);
+            const obj = b.addObject(.{
+                .name = "pcre_" ++ bn,
+                .target = target,
+                .optimize = optimize,
+            });
+            obj.linkLibC();
+            obj.addCSourceFile(.{
+                .file = b.path("deps/pcre").path(b, f),
+                .flags = &common_flags,
+            });
+            inline for (macros) |macro| {
+                obj.defineCMacro(macro[0], macro[1]);
+            }
+            obj.addIncludePath(pcre_config_h.getOutput().dirname());
+            git_exe.addCSourceFile(.{
+                .file = obj.getEmittedBin(),
+            });
         }
-        obj.addIncludePath(pcre_config_h.getOutput().dirname());
-        git_exe.addCSourceFile(.{
-            .file = obj.getEmittedBin(),
-        });
     }
 
     git_exe.addCSourceFiles(.{
@@ -93,11 +102,6 @@ pub fn build(b: *std.Build) void {
         .root = b.path("deps/xdiff"),
         .flags = &common_flags,
     });
-    // git_exe.addCSourceFiles(.{
-    //     .files = &pcre_files,
-    //     .root = b.path("deps/pcre"),
-    //     .flags = &common_flags,
-    // });
     git_exe.addCSourceFiles(.{
         .files = &ntlmclient_files,
         .root = b.path("deps/ntlmclient"),
@@ -120,15 +124,15 @@ pub fn build(b: *std.Build) void {
 }
 
 pub const macros = .{
-    .{"_DEBUG", null},
-    .{"_GNU_SOURCE", null},
-    .{"CRYPT_OPENSSL", null},
-    .{"GIT_DEPRECATE_HARD", null },
-    .{"HAVE_CONFIG_H", null },
-    .{"NTLM_STATIC", "1" },
-    .{"OPENSSL_API_COMPAT", "0x10100000L" },
-    .{"SIZE_MAX", "0xFFFFFFFFFFFFFFFFULL" },
-    .{"UNICODE_BUILTIN", "1" },
+    .{ "_DEBUG", null },
+    .{ "_GNU_SOURCE", null },
+    .{ "CRYPT_OPENSSL", null },
+    .{ "GIT_DEPRECATE_HARD", null },
+    .{ "HAVE_CONFIG_H", null },
+    .{ "NTLM_STATIC", "1" },
+    .{ "OPENSSL_API_COMPAT", "0x10100000L" },
+    .{ "SIZE_MAX", "0xFFFFFFFFFFFFFFFFULL" },
+    .{ "UNICODE_BUILTIN", "1" },
 };
 
 pub const common_flags = .{
