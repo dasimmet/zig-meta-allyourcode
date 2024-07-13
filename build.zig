@@ -67,7 +67,7 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
     if (b.lazyDependency("cmake", cmake_options)) |dep| {
         cmake.build(dep.builder);
         const cm_step = b.step("cmake", "build the cmake exe");
-        inline for (.{ "bootstrap", "uv" }) |f| {
+        inline for (.{ "cmake", "uv" }) |f| {
             const cm_art = dep.artifact(f);
             const cm_name = if (cm_art.kind == .lib)
                 "cmake_" ++ f ++ ".so"
@@ -81,7 +81,10 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             cm_step.dependOn(&cm_install.step);
         }
 
-        const cmake_install_path = cmake.cmakeStage2(dep.builder, dep.artifact("bootstrap"));
+        const cmake_install_path = cmake.cmakeStage2(
+            dep.builder,
+            dep.artifact("cmake"),
+        );
         b.step("run-bs", "run bs").dependOn(cmake_install_path.generated.file.step);
     }
 }

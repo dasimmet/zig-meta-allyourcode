@@ -11,5 +11,10 @@ and it will run the build as if committed to the cmake repository.
 
 ## Ideas for integration
 
-- cmake (including custom build step)
+- cmake (including custom build step?)
+  - ✅ stage1
+  - ✅ running bootstrap `cmake` to reconfigure itself with `CC=zig cc`
+  - use system `make` to rebuild `cmake`
+- gnu make
+    - integrate in cmake build
 - libgit2 ✅

@@ -4,35 +4,35 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const bs = b.addExecutable(.{
-        .name = "bootstrap",
+    const cmake_bootstrap = b.addExecutable(.{
+        .name = "cmake",
         .target = target,
         .optimize = optimize,
     });
-    bs.linkLibC();
-    bs.linkLibCpp();
-    addMacros(b, bs);
+    cmake_bootstrap.linkLibC();
+    cmake_bootstrap.linkLibCpp();
+    addMacros(b, cmake_bootstrap);
 
     const generated_headers = ConfigHeaders.build(b);
-    bs.addIncludePath(generated_headers);
-    bs.addIncludePath(generated_headers.path(b, "cmsys"));
-    bs.addIncludePath(b.path("Source"));
-    bs.addIncludePath(b.path("Source/LexerParser"));
-    bs.addIncludePath(b.path("Utilities"));
-    bs.addIncludePath(b.path("Utilities/cmjsoncpp/include"));
-    bs.addIncludePath(b.path("Utilities/cmlibrhash/librhash"));
-    bs.addIncludePath(b.path("Utilities/std"));
+    cmake_bootstrap.addIncludePath(generated_headers);
+    cmake_bootstrap.addIncludePath(generated_headers.path(b, "cmsys"));
+    cmake_bootstrap.addIncludePath(b.path("Source"));
+    cmake_bootstrap.addIncludePath(b.path("Source/LexerParser"));
+    cmake_bootstrap.addIncludePath(b.path("Utilities"));
+    cmake_bootstrap.addIncludePath(b.path("Utilities/cmjsoncpp/include"));
+    cmake_bootstrap.addIncludePath(b.path("Utilities/cmlibrhash/librhash"));
+    cmake_bootstrap.addIncludePath(b.path("Utilities/std"));
 
-    bs.addCSourceFiles(.{
+    cmake_bootstrap.addCSourceFiles(.{
         .files = CMAKE_CXX_SOURCES,
         .root = b.path("Source"),
     });
-    bs.addCSourceFiles(.{
+    cmake_bootstrap.addCSourceFiles(.{
         .files = CMAKE_UTILITY_SOURCES,
         .root = b.path("Utilities"),
     });
-    b.installArtifact(bs);
-    const run = b.addRunArtifact(bs);
+    b.installArtifact(cmake_bootstrap);
+    const run = b.addRunArtifact(cmake_bootstrap);
     b.step("run", "run").dependOn(&run.step);
 
     const libuv = LibUV.build(b, .{
@@ -40,7 +40,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .generated_headers = generated_headers,
     });
-    bs.linkLibrary(libuv);
+    cmake_bootstrap.linkLibrary(libuv);
     b.installArtifact(libuv);
 
     const librhash = LibRHash.build(b, .{
@@ -48,34 +48,49 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .generated_headers = generated_headers,
     });
-    bs.linkLibrary(librhash);
+    cmake_bootstrap.linkLibrary(librhash);
     const kwsys = KwSys.build(b, .{
         .target = target,
         .optimize = optimize,
         .generated_headers = generated_headers,
     });
-    bs.linkLibrary(kwsys);
-    const cmake_install_path = cmakeStage2(b, bs);
+    cmake_bootstrap.linkLibrary(kwsys);
+    const cmake_install_path = cmakeStage2(b, cmake_bootstrap);
     b.step("run-bs", "run bs").dependOn(cmake_install_path.generated.file.step);
 }
 
 pub fn cmakeStage2(b: *std.Build, bootstrap_exe: *std.Build.Step.Compile) std.Build.LazyPath {
     const bs_run = b.addRunArtifact(bootstrap_exe);
+    const stage2_path = b.makeTempPath();
+    const stage2_path_arg = std.mem.join(b.allocator, "", &.{
+        "-DCMAKE_DUMMY_CWD_ARG=",
+        stage2_path,
+    }) catch @panic("OOM");
+    bs_run.setCwd(.{ .cwd_relative = stage2_path });
     bs_run.addDirectoryArg(b.path(""));
-    // bs_run.addPrefixedFileArg("-C", b.path("InitialCacheFlags.cmake"));
-    const zig_cc = std.mem.join(
-        b.allocator,
-        " ",
-        &.{ b.graph.zig_exe, "cc", "-lc" },
-    ) catch @panic("OOM");
-    const zig_cxx = std.mem.join(
-        b.allocator,
-        " ",
-        &.{ b.graph.zig_exe, "c++", "-lc" },
-    ) catch @panic("OOM");
-    bs_run.setEnvironmentVariable("CC", zig_cc);
-    bs_run.setEnvironmentVariable("CXX", zig_cxx);
-    bs_run.setCwd(.{ .cwd_relative = b.makeTempPath() });
+    const native = b.resolveTargetQuery(.{});
+    const zig_cc = b.addExecutable(.{
+        .name = "cc",
+        .root_source_file = b.path("src/cc.zig"),
+        .target = native,
+        .optimize = .Debug,
+    });
+    const zig_cxx = b.addExecutable(.{
+        .name = "cxx",
+        .root_source_file = b.path("src/cxx.zig"),
+        .target = native,
+        .optimize = .Debug,
+    });
+    inline for (.{
+        .{ "-DCMAKE_CC_COMPILER=", zig_cc.getEmittedBin() },
+        .{ "-DCMAKE_CXX_COMPILER=", zig_cxx.getEmittedBin() },
+    }) |it| {
+        bs_run.addPrefixedDirectoryArg(it[0], it[1]);
+    }
+    bs_run.setEnvironmentVariable("ZIG", b.graph.zig_exe);
+    bs_run.setEnvironmentVariable("CXX_FLAGS", "-lc");
+    bs_run.setEnvironmentVariable("CXX_FLAGS", "-lc");
+    bs_run.addArg(stage2_path_arg);
     return bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
 }
 
@@ -100,7 +115,7 @@ pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
         .{ "CMAKE_BOOTSTRAP_SOURCE_DIR", std.mem.join(
             b.allocator,
             "",
-            &.{ "\"", b.pathFromRoot("") , "\"" },
+            &.{ "\"", b.pathFromRoot(""), "\"" },
         ) catch @panic("OOM") },
         .{ "CMAKE_BOOTSTRAP_MAKEFILES", null },
         .{ "CMake_HAVE_CXX_MAKE_UNIQUE", "1" },
@@ -204,19 +219,6 @@ pub const KwSys = struct {
         kwsys.linkLibC();
         kwsys.linkLibCpp();
         addMacros(b, kwsys);
-        // inline for (.{
-        //     .{ "_FILE_OFFSET_BITS", "64" },
-        //     .{ "CMake_HAVE_CXX_MAKE_UNIQUE", "1" },
-        //     .{ "CMake_HAVE_CXX_FILESYSTEM", "1" },
-        //     .{ "KWSYS_CXX_HAS_SETENV", "1" },
-        //     .{ "KWSYS_CXX_HAS_UNSETENV", "1" },
-        //     .{ "KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H", "0" },
-        //     .{ "KWSYS_CXX_HAS_UTIMENSAT", "0" },
-        //     .{ "KWSYS_CXX_HAS_UTIMES", "0" },
-        //     .{ "KWSYS_NAMESPACE", "cmsys" },
-        // }) |m| {
-        //     kwsys.defineCMacro(m[0], m[1]);
-        // }
         kwsys.addIncludePath(opt.generated_headers);
         kwsys.addIncludePath(b.path("Source/kwsys"));
         kwsys.addIncludePath(b.path("Utilities"));
