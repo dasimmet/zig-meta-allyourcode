@@ -1,0 +1,3 @@
+[submodule "submodule/cmake"]
+	path = submodule/cmake
+	url = https://github.com/Kitware/CMake.git
