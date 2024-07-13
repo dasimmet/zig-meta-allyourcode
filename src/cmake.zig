@@ -55,6 +55,9 @@ pub fn build(b: *std.Build) void {
         .generated_headers = generated_headers,
     });
     bs.linkLibrary(kwsys);
+
+    const bs_run = b.addRunArtifact(bs);
+    b.step("run-bs", "run bs").dependOn(&bs_run.step);
 }
 
 pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
@@ -525,7 +528,7 @@ pub const ConfigHeaders = struct {
     };
 
     pub fn build(b: *std.Build) std.Build.LazyPath {
-        const generated_headers = b.addWriteFiles();
+        const generated_headers = b.addNamedWriteFiles("generated_headers");
         for (configHeaders(b)) |h| {
             const h_p = b.pathJoin(&.{
                 "generated_headers",

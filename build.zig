@@ -66,11 +66,12 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
     if (b.lazyDependency("cmake", cmake_options)) |dep| {
         cmake.build(dep.builder);
         const cm_step = b.step("cmake", "build the cmake exe");
-        inline for (.{ "bootstrap", "uv"}) |f| {
+        inline for (.{ "bootstrap", "uv" }) |f| {
             const cm_art = dep.artifact(f);
             const cm_name = if (cm_art.kind == .lib)
-                "cmake_"++f++".so"
-                else "cmake_"++f;
+                "cmake_" ++ f ++ ".so"
+            else
+                "cmake_" ++ f;
 
             const cm_install = b.addInstallArtifact(cm_art, .{
                 .dest_sub_path = cm_name,
@@ -78,6 +79,11 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             b.getInstallStep().dependOn(&cm_install.step);
             cm_step.dependOn(&cm_install.step);
         }
+
+        const bs_run = b.addRunArtifact(dep.artifact("bootstrap"));
+        bs_run.addDirectoryArg(dep.path(""));
+        _ = bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
+        b.step("run-bs", "run bs").dependOn(&bs_run.step);
     }
 }
 
