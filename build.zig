@@ -85,6 +85,11 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             dep.builder,
             dep.artifact("cmake"),
         );
+        b.installDirectory(.{
+            .source_dir = cmake_install_path,
+            .install_dir = .{ .custom = "cmake" },
+            .install_subdir = "",
+        });
         b.step("run-bs", "run bs").dependOn(cmake_install_path.generated.file.step);
     }
 }

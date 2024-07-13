@@ -1,4 +1,5 @@
 const std = @import("std");
+const LibUV = @import("cmake_libuv.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -88,9 +89,8 @@ pub fn cmakeStage2(b: *std.Build, bootstrap_exe: *std.Build.Step.Compile) std.Bu
         bs_run.addPrefixedDirectoryArg(it[0], it[1]);
     }
     bs_run.setEnvironmentVariable("ZIG", b.graph.zig_exe);
-    bs_run.setEnvironmentVariable("CXX_FLAGS", "-lc");
-    bs_run.setEnvironmentVariable("CXX_FLAGS", "-lc");
     bs_run.addArg(stage2_path_arg);
+    bs_run.has_side_effects = true;
     return bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
 }
 
@@ -124,55 +124,6 @@ pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
         comp.defineCMacro(macro[0], macro[1]);
     }
 }
-
-pub const LibUV = struct {
-    const Self = @This();
-    pub fn build(b: *std.Build, opt: anytype) *std.Build.Step.Compile {
-        const libuv = b.addStaticLibrary(.{
-            .name = "uv",
-            .target = opt.target,
-            .optimize = opt.optimize,
-        });
-        libuv.linkLibC();
-        addMacros(b, libuv);
-        libuv.addCSourceFiles(.{
-            .files = LibUV.C_SOURCES,
-            .root = b.path("Utilities/cmlibuv/src"),
-            .flags = &.{"-D_GNU_SOURCE"},
-        });
-        libuv.addIncludePath(opt.generated_headers);
-        inline for (Self.IncludePaths) |p| {
-            libuv.addIncludePath(b.path(p));
-        }
-        return libuv;
-    }
-    pub const IncludePaths = &.{
-        "Utilities/cmlibuv/include",
-        "Utilities/cmlibuv/src",
-        "Utilities/cmlibuv/src/unix",
-    };
-    pub const C_SOURCES = &.{
-        "strscpy.c",
-        "strtok.c",
-        "timer.c",
-        "uv-common.c",
-        "unix/cmake-bootstrap.c",
-        "unix/core.c",
-        "unix/fs.c",
-        "unix/loop.c",
-        "unix/loop-watcher.c",
-        "unix/no-fsevents.c",
-        "unix/pipe.c",
-        "unix/poll.c",
-        "unix/posix-hrtime.c",
-        "unix/posix-poll.c",
-        "unix/process.c",
-        "unix/signal.c",
-        "unix/stream.c",
-        "unix/tcp.c",
-        "unix/tty.c",
-    };
-};
 
 pub const LibRHash = struct {
     const Self = @This();
