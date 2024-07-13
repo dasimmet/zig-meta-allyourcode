@@ -1,6 +1,7 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
+    @setEvalBranchQuota(2000);
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const git_exe = b.addExecutable(.{
@@ -10,31 +11,47 @@ pub fn build(b: *std.Build) void {
     });
     git_exe.linkLibC();
 
-    const config_h = b.addConfigHeader(.{
-        .include_path = "config.h",
-        .style = .{ .cmake = b.path("deps/pcre/config.h.in") },
-    }, header_config);
-    git_exe.addIncludePath(config_h.getOutput().dirname());
-
     const features_h = b.addConfigHeader(.{
-        .include_path = "git2_features.h",
+        .include_path = "configheader/git2_features.h",
         .style = .{ .cmake = b.path("src/util/git2_features.h.in") },
     }, header_config);
     git_exe.addIncludePath(features_h.getOutput().dirname());
-
-    git_exe.defineCMacro("_DEBUG", null);
-    git_exe.defineCMacro("_GNU_SOURCE", null);
-    git_exe.defineCMacro("CRYPT_OPENSSL", null);
-    git_exe.defineCMacro("GIT_DEPRECATE_HARD", null);
-    git_exe.defineCMacro("HAVE_CONFIG_H", null);
-    git_exe.defineCMacro("NTLM_STATIC", "1");
-    git_exe.defineCMacro("OPENSSL_API_COMPAT", "0x10100000L");
-    git_exe.defineCMacro("SIZE_MAX", "0xFFFFFFFFFFFFFFFFULL");
-    git_exe.defineCMacro("UNICODE_BUILTIN", "1");
+ 
+    inline for (macros) |macro| {
+        git_exe.defineCMacro(macro[0], macro[1]);
+    }
 
     inline for (git2_include_paths) |inc| {
         git_exe.addIncludePath(b.path(inc));
     }
+    // git_exe.addIncludePath(features_h.getOutput().dirname());
+
+    // inline for (git2_util_files) |f| {
+    //     const bn = comptime std.fs.path.basename(f);
+    //     const obj = b.addObject(.{
+    //         .name = "git2_util_"++bn,
+    //         .target = target,
+    //         .optimize = optimize,
+    //     });
+    //     obj.linkLibC();
+    //     obj.addCSourceFile(.{
+    //         .file = b.path("src/util").path(b, f),
+    //         .flags = &common_flags,
+    //     });
+    //     inline for (macros) |macro| {
+    //         obj.defineCMacro(macro[0], macro[1]);
+    //     }
+    //     obj.addIncludePath(features_h.getOutput().dirname());
+    //     inline for (git2_include_paths) |inc| {
+    //         obj.addIncludePath(b.path(inc));
+    //     }
+    //     inline for (cli_system_libs) |l| {
+    //         obj.linkSystemLibrary(l);
+    //     }
+    //     git_exe.addCSourceFile(.{
+    //         .file = obj.getEmittedBin(),
+    //     });
+    // }
     git_exe.addCSourceFiles(.{
         .files = &git2_util_files,
         .root = b.path("src/util"),
@@ -45,11 +62,42 @@ pub fn build(b: *std.Build) void {
         .root = b.path("deps/llhttp"),
         .flags = &common_flags,
     });
+
+    const pcre_config_h = b.addConfigHeader(.{
+        .include_path = "configheader/config.h",
+        .style = .{ .cmake = b.path("deps/pcre/config.h.in") },
+    }, header_config);
+    inline for (pcre_files) |f| {
+        const bn = comptime std.fs.path.basename(f);
+        const obj = b.addObject(.{
+            .name = "pcre_"++bn,
+            .target = target,
+            .optimize = optimize,
+        });
+        obj.linkLibC();
+        obj.addCSourceFile(.{
+            .file = b.path("deps/pcre").path(b, f),
+            .flags = &common_flags,
+        });
+        inline for (macros) |macro| {
+            obj.defineCMacro(macro[0], macro[1]);
+        }
+        obj.addIncludePath(pcre_config_h.getOutput().dirname());
+        git_exe.addCSourceFile(.{
+            .file = obj.getEmittedBin(),
+        });
+    }
+
     git_exe.addCSourceFiles(.{
-        .files = &pcre_files,
-        .root = b.path("deps/pcre"),
+        .files = &xdiff_files,
+        .root = b.path("deps/xdiff"),
         .flags = &common_flags,
     });
+    // git_exe.addCSourceFiles(.{
+    //     .files = &pcre_files,
+    //     .root = b.path("deps/pcre"),
+    //     .flags = &common_flags,
+    // });
     git_exe.addCSourceFiles(.{
         .files = &ntlmclient_files,
         .root = b.path("deps/ntlmclient"),
@@ -70,6 +118,18 @@ pub fn build(b: *std.Build) void {
     }
     b.installArtifact(git_exe);
 }
+
+pub const macros = .{
+    .{"_DEBUG", null},
+    .{"_GNU_SOURCE", null},
+    .{"CRYPT_OPENSSL", null},
+    .{"GIT_DEPRECATE_HARD", null },
+    .{"HAVE_CONFIG_H", null },
+    .{"NTLM_STATIC", "1" },
+    .{"OPENSSL_API_COMPAT", "0x10100000L" },
+    .{"SIZE_MAX", "0xFFFFFFFFFFFFFFFFULL" },
+    .{"UNICODE_BUILTIN", "1" },
+};
 
 pub const common_flags = .{
     // "-Wall",
@@ -161,10 +221,11 @@ pub const git2_include_paths = .{
     "src/util",
     "deps/llhttp",
     "deps/pcre",
-    "src/ntlmclient",
+    "deps/xdiff",
+    "deps/ntlmclient",
     "src/libgit2",
     "src/cli",
-    "include/git2",
+    // "include/git2", DO NOT INCLUDE THIS IT WILL RUIN STDLIB INCLUDES
 };
 
 pub const git2_util_files = .{
