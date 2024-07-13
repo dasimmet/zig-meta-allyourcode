@@ -55,28 +55,31 @@ pub fn build(b: *std.Build) void {
         .generated_headers = generated_headers,
     });
     bs.linkLibrary(kwsys);
+    const cmake_install_path = cmakeStage2(b, bs);
+    b.step("run-bs", "run bs").dependOn(cmake_install_path.generated.file.step);
+}
 
-    const bs_run = b.addRunArtifact(bs);
-    b.step("run-bs", "run bs").dependOn(&bs_run.step);
+pub fn cmakeStage2(b: *std.Build, bootstrap_exe: *std.Build.Step.Compile) std.Build.LazyPath {
+    const bs_run = b.addRunArtifact(bootstrap_exe);
+    bs_run.addDirectoryArg(b.path(""));
+    // bs_run.addPrefixedFileArg("-C", b.path("InitialCacheFlags.cmake"));
+    const zig_cc = std.mem.join(
+        b.allocator,
+        " ",
+        &.{ b.graph.zig_exe, "cc", "-lc" },
+    ) catch @panic("OOM");
+    const zig_cxx = std.mem.join(
+        b.allocator,
+        " ",
+        &.{ b.graph.zig_exe, "c++", "-lc" },
+    ) catch @panic("OOM");
+    bs_run.setEnvironmentVariable("CC", zig_cc);
+    bs_run.setEnvironmentVariable("CXX", zig_cxx);
+    bs_run.setCwd(.{ .cwd_relative = b.makeTempPath() });
+    return bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
 }
 
 pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
-    comp.defineCMacro(
-        "CMAKE_BOOTSTRAP_BINARY_DIR",
-        std.mem.join(
-            b.allocator,
-            "",
-            &.{ "\"", b.install_path, "\"" },
-        ) catch @panic("OOM"),
-    );
-    comp.defineCMacro(
-        "CMAKE_BOOTSTRAP_SOURCE_DIR",
-        std.mem.join(
-            b.allocator,
-            "",
-            &.{ "\"", b.install_path, "\"" },
-        ) catch @panic("OOM"),
-    );
     inline for (.{
         // kwsys
         .{ "KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H", "0" },
@@ -89,6 +92,16 @@ pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
         // cmake
         .{ "_FILE_OFFSET_BITS", "64" },
         .{ "CMAKE_BOOTSTRAP", null },
+        .{ "CMAKE_BOOTSTRAP_BINARY_DIR", std.mem.join(
+            b.allocator,
+            "",
+            &.{ "\"", b.install_path, "\"" },
+        ) catch @panic("OOM") },
+        .{ "CMAKE_BOOTSTRAP_SOURCE_DIR", std.mem.join(
+            b.allocator,
+            "",
+            &.{ "\"", b.pathFromRoot("") , "\"" },
+        ) catch @panic("OOM") },
         .{ "CMAKE_BOOTSTRAP_MAKEFILES", null },
         .{ "CMake_HAVE_CXX_MAKE_UNIQUE", "1" },
         .{ "CMake_HAVE_CXX_FILESYSTEM", "1" },
@@ -503,10 +516,10 @@ pub const ConfigHeaders = struct {
         CMAKE_DATA_DIR: []const u8 = "/bootstrap-not-installed",
         CMake_DEFAULT_RECURSION_LIMIT: u16 = 400,
         CMAKE_DOC_DIR: []const u8 = "DOC",
-        CMake_VERSION: []const u8 = "0.0.0-bootstrap",
+        CMake_VERSION: []const u8 = "3.30.0-bootstrap",
         CMake_VERSION_IS_DIRTY: u16 = 1,
-        CMake_VERSION_MAJOR: u16 = 0,
-        CMake_VERSION_MINOR: u16 = 0,
+        CMake_VERSION_MAJOR: u16 = 3,
+        CMake_VERSION_MINOR: u16 = 30,
         CMake_VERSION_PATCH: u16 = 0,
         CMake_VERSION_SUFFIX: []const u8 = "bootstrap",
         CURL_CA_BUNDLE: []const u8 = "",

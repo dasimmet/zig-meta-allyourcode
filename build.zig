@@ -5,6 +5,7 @@
 
 const meta_allyourcode = @This();
 const std = @import("std");
+const builtin = @import("builtin");
 const FunctionStep = @import("src/FunctionStep.zig");
 
 pub fn build(b: *std.Build) void {
@@ -80,10 +81,8 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             cm_step.dependOn(&cm_install.step);
         }
 
-        const bs_run = b.addRunArtifact(dep.artifact("bootstrap"));
-        bs_run.addDirectoryArg(dep.path(""));
-        _ = bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
-        b.step("run-bs", "run bs").dependOn(&bs_run.step);
+        const cmake_install_path = cmake.cmakeStage2(dep.builder, dep.artifact("bootstrap"));
+        b.step("run-bs", "run bs").dependOn(cmake_install_path.generated.file.step);
     }
 }
 
