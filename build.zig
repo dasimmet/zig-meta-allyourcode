@@ -29,20 +29,24 @@ pub fn build(b: *std.Build) void {
         addLibGitBuild(b, defaults);
     }
     const clean = b.addRemoveDirTree(b.cache_root.path.?);
-    b.step("clean","clean").dependOn(&clean.step);
+    b.step("clean", "clean").dependOn(&clean.step);
     const clean_glob = b.addRemoveDirTree(b.graph.global_cache_root.path.?);
-    b.step("clean-glob","clean").dependOn(&clean_glob.step);
+    b.step("clean-glob", "clean").dependOn(&clean_glob.step);
 }
 
 pub fn addLibGitBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
     const libgit2 = @import("src/libgit2.zig");
     if (b.lazyDependency("libgit2", defaults)) |dep| {
         libgit2.build(dep.builder);
-        const git2_exe = b.addInstallArtifact(dep.artifact("git2"), .{
-            .dest_sub_path = "git2",
-        });
-        b.getInstallStep().dependOn(&git2_exe.step);
-        b.step("git2", "build the git2 exe").dependOn(&git2_exe.step);
+        const git2_step = b.step("git2", "build the git2 exe");
+        inline for (.{ "git2", "libgit2", "git2_util", "pcre" }) |f| {
+            const git2_art = b.addInstallArtifact(
+                dep.artifact(f),
+                .{},
+            );
+            git2_step.dependOn(&git2_art.step);
+        }
+        b.getInstallStep().dependOn(git2_step);
     }
 }
 

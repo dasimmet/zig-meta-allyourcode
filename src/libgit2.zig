@@ -4,123 +4,161 @@ pub fn build(b: *std.Build) void {
     @setEvalBranchQuota(2000);
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const git_exe = b.addExecutable(.{
+
+    const git2_exe = b.addExecutable(.{
         .name = "git2",
         .target = target,
         .optimize = optimize,
     });
-    git_exe.linkLibC();
+    inline for (git2_include_paths) |inc| {
+        git2_exe.addIncludePath(b.path(inc));
+    }
+    git2_exe.linkLibC();
+    git2_exe.addCSourceFiles(.{
+        .files = &git2_cli_files,
+        .root = b.path("src/cli"),
+        .flags = &common_flags,
+    });
+    b.installArtifact(git2_exe);
+
+    const libgit2 = b.addStaticLibrary(.{
+        .name = "libgit2",
+        .target = target,
+        .optimize = optimize,
+    });
+    git2_exe.linkLibrary(libgit2);
+    libgit2.linkLibC();
+
+    inline for (macros) |macro| {
+        libgit2.defineCMacro(macro[0], macro[1]);
+    }
+
+    inline for (git2_include_paths) |inc| {
+        libgit2.addIncludePath(b.path(inc));
+    }
+    inline for (cli_system_libs) |l| {
+        libgit2.linkSystemLibrary(l);
+    }
+
+    libgit2.addCSourceFiles(.{
+        .files = &llhttp_files,
+        .root = b.path("deps/llhttp"),
+        .flags = &common_flags,
+    });
+    libgit2.addCSourceFiles(.{
+        .files = &ntlmclient_files,
+        .root = b.path("deps/ntlmclient"),
+        .flags = &common_flags,
+    });
+    libgit2.addCSourceFiles(.{
+        .files = &libgit2_files,
+        .root = b.path("src/libgit2"),
+        .flags = &common_flags,
+    });
+    b.installArtifact(libgit2);
 
     const features_h = b.addConfigHeader(.{
         .include_path = "configheader/git2_features.h",
         .style = .{ .cmake = b.path("src/util/git2_features.h.in") },
     }, header_config);
-    git_exe.addIncludePath(features_h.getOutput().dirname());
+    libgit2.addIncludePath(features_h.getOutput().dirname());
+    git2_exe.addIncludePath(features_h.getOutput().dirname());
 
-    inline for (macros) |macro| {
-        git_exe.defineCMacro(macro[0], macro[1]);
-    }
-
-    inline for (git2_include_paths) |inc| {
-        git_exe.addIncludePath(b.path(inc));
-    }
-    // git_exe.addIncludePath(features_h.getOutput().dirname());
-
-    // inline for (git2_util_files) |f| {
-    //     const bn = comptime std.fs.path.basename(f);
-    //     const obj = b.addObject(.{
-    //         .name = "git2_util_"++bn,
-    //         .target = target,
-    //         .optimize = optimize,
-    //     });
-    //     obj.linkLibC();
-    //     obj.addCSourceFile(.{
-    //         .file = b.path("src/util").path(b, f),
-    //         .flags = &common_flags,
-    //     });
-    //     inline for (macros) |macro| {
-    //         obj.defineCMacro(macro[0], macro[1]);
-    //     }
-    //     obj.addIncludePath(features_h.getOutput().dirname());
-    //     inline for (git2_include_paths) |inc| {
-    //         obj.addIncludePath(b.path(inc));
-    //     }
-    //     inline for (cli_system_libs) |l| {
-    //         obj.linkSystemLibrary(l);
-    //     }
-    //     git_exe.addCSourceFile(.{
-    //         .file = obj.getEmittedBin(),
-    //     });
-    // }
-    git_exe.addCSourceFiles(.{
-        .files = &git2_util_files,
-        .root = b.path("src/util"),
-        .flags = &common_flags,
+    const git2_util = b.addStaticLibrary(.{
+        .name = "git2_util",
+        .target = target,
+        .optimize = optimize,
     });
-    git_exe.addCSourceFiles(.{
-        .files = &llhttp_files,
-        .root = b.path("deps/llhttp"),
-        .flags = &common_flags,
+    {
+        git2_util.linkLibC();
+        git2_util.addCSourceFiles(.{
+            .files = &git2_util_files,
+            .root = b.path("src/util"),
+            .flags = &common_flags,
+        });
+        inline for (macros) |macro| {
+            git2_util.defineCMacro(macro[0], macro[1]);
+        }
+        git2_util.addIncludePath(features_h.getOutput().dirname());
+        inline for (git2_include_paths) |inc| {
+            git2_util.addIncludePath(b.path(inc));
+        }
+        inline for (cli_system_libs) |lib| {
+            git2_util.linkSystemLibrary(lib);
+        }
+        libgit2.linkLibrary(git2_util);
+        b.installArtifact(git2_util);
+    }
+    const pcre = b.addStaticLibrary(.{
+        .name = "pcre",
+        .target = target,
+        .optimize = optimize,
     });
-
     {
         const pcre_config_h = b.addConfigHeader(.{
             .include_path = "configheader/config.h",
             .style = .{ .cmake = b.path("deps/pcre/config.h.in") },
         }, header_config);
-        // // We cannot the sources directly, as the config.h import is taken
-        // git_exe.addIncludePath(pcre_config_h.getOutput().dirname());
-        // git_exe.addCSourceFiles(.{
-        //     .files = &pcre_files,
-        //     .root = b.path("deps/pcre"),
-        //     .flags = &common_flags,
-        // });
-        inline for (pcre_files) |f| {
-            const bn = comptime std.fs.path.basename(f);
-            const obj = b.addObject(.{
-                .name = "pcre_" ++ bn,
-                .target = target,
-                .optimize = optimize,
-            });
-            obj.linkLibC();
-            obj.addCSourceFile(.{
-                .file = b.path("deps/pcre").path(b, f),
-                .flags = &common_flags,
-            });
-            inline for (macros) |macro| {
-                obj.defineCMacro(macro[0], macro[1]);
-            }
-            obj.addIncludePath(pcre_config_h.getOutput().dirname());
-            git_exe.addCSourceFile(.{
-                .file = obj.getEmittedBin(),
-            });
+        pcre.addIncludePath(pcre_config_h.getOutput().dirname());
+        pcre.addCSourceFiles(.{
+            .files = &pcre_files,
+            .root = b.path("deps/pcre"),
+            .flags = &common_flags,
+        });
+        pcre.linkLibC();
+        inline for (macros) |macro| {
+            pcre.defineCMacro(macro[0], macro[1]);
         }
+        pcre.addIncludePath(pcre_config_h.getOutput().dirname());
+        libgit2.linkLibrary(pcre);
+        b.installArtifact(pcre);
     }
 
-    git_exe.addCSourceFiles(.{
-        .files = &xdiff_files,
-        .root = b.path("deps/xdiff"),
-        .flags = &common_flags,
-    });
-    git_exe.addCSourceFiles(.{
-        .files = &ntlmclient_files,
-        .root = b.path("deps/ntlmclient"),
-        .flags = &common_flags,
-    });
-    git_exe.addCSourceFiles(.{
-        .files = &libgit2_files,
-        .root = b.path("src/libgit2"),
-        .flags = &common_flags,
-    });
-    git_exe.addCSourceFiles(.{
-        .files = &git2_cli_files,
-        .root = b.path("src/cli"),
-        .flags = &common_flags,
-    });
-    inline for (cli_system_libs) |l| {
-        git_exe.linkSystemLibrary(l);
+    {
+        const xdiff = b.addStaticLibrary(.{
+            .name = "xdiff",
+            .target = target,
+            .optimize = optimize,
+        });
+        xdiff.linkLibC();
+        xdiff.addCSourceFiles(.{
+            .files = &xdiff_files,
+            .root = b.path("deps/xdiff"),
+            .flags = &common_flags,
+        });
+        xdiff.addIncludePath(b.path("deps/pcre"));
+        xdiff.addIncludePath(b.path("src/util"));
+        xdiff.addIncludePath(b.path("include"));
+        xdiff.addIncludePath(features_h.getOutput().dirname());
+        libgit2.linkLibrary(xdiff);
+        b.installArtifact(xdiff);
     }
-    b.installArtifact(git_exe);
+    // {
+    //     const ntlmclient = b.addStaticLibrary(.{
+    //         .name = "ntlmclient",
+    //         .target = target,
+    //         .optimize = optimize,
+    //     });
+    //     ntlmclient.linkLibC();
+    //     ntlmclient.addCSourceFiles(.{
+    //         .files = &ntlmclient_files,
+    //         .root = b.path("deps/ntlmclient"),
+    //         .flags = &common_flags,
+    //     });
+    //     // ntlmclient.addIncludePath(b.path("deps/pcre"));
+    //     ntlmclient.addIncludePath(b.path("src/util"));
+    //     ntlmclient.addIncludePath(b.path("include"));
+    //     // ntlmclient.addIncludePath(features_h.getOutput().dirname());
+    //     inline for (macros) |macro| {
+    //         ntlmclient.defineCMacro(macro[0], macro[1]);
+    //     }
+    //     ntlmclient.linkLibrary(pcre);
+    //     // inline for (cli_system_libs) |l| {
+    //     //     libgit2.linkSystemLibrary(l);
+    //     // }
+    //     libgit2.linkLibrary(ntlmclient);
+    //     b.installArtifact(ntlmclient);
+    // }
 }
 
 pub const macros = .{
