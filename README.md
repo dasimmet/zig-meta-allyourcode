@@ -12,4 +12,4 @@ and it will run the build as if committed to the cmake repository.
 ## Ideas for integration
 
 - cmake (including custom build step)
-- libgit2
+- libgit2 ✅

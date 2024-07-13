@@ -133,32 +133,6 @@ pub fn build(b: *std.Build) void {
         libgit2.linkLibrary(xdiff);
         b.installArtifact(xdiff);
     }
-    // {
-    //     const ntlmclient = b.addStaticLibrary(.{
-    //         .name = "ntlmclient",
-    //         .target = target,
-    //         .optimize = optimize,
-    //     });
-    //     ntlmclient.linkLibC();
-    //     ntlmclient.addCSourceFiles(.{
-    //         .files = &ntlmclient_files,
-    //         .root = b.path("deps/ntlmclient"),
-    //         .flags = &common_flags,
-    //     });
-    //     // ntlmclient.addIncludePath(b.path("deps/pcre"));
-    //     ntlmclient.addIncludePath(b.path("src/util"));
-    //     ntlmclient.addIncludePath(b.path("include"));
-    //     // ntlmclient.addIncludePath(features_h.getOutput().dirname());
-    //     inline for (macros) |macro| {
-    //         ntlmclient.defineCMacro(macro[0], macro[1]);
-    //     }
-    //     ntlmclient.linkLibrary(pcre);
-    //     // inline for (cli_system_libs) |l| {
-    //     //     libgit2.linkSystemLibrary(l);
-    //     // }
-    //     libgit2.linkLibrary(ntlmclient);
-    //     b.installArtifact(ntlmclient);
-    // }
 }
 
 pub const macros = .{
