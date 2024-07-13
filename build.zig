@@ -91,7 +91,6 @@ pub fn mergeStructFields(ta: type, tb: type) type {
 pub const DefaultBuildOptions = struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
-    @"test": u8 = 0,
 };
 
 fn cacheFunction(args: *FunctionStep.Args) anyerror!void {
