@@ -1,6 +1,7 @@
 const std = @import("std");
 const LibUV = @import("cmake_libuv.zig");
 const LazyPath = std.Build.LazyPath;
+pub const Toolchain = @import("cmake_toolchain.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -66,34 +67,11 @@ pub fn build(b: *std.Build) void {
     });
     cmake_bootstrap.linkLibrary(lexer);
     var cmake_tc = Toolchain{};
-    cmake_tc.zigBuildDefaults(b);
+    cmake_tc.zigBuildDefaultsRelative(b);
     cmake_tc.CMAKE = cmake_bootstrap.getEmittedBin();
     const cmake_install_path = cmakeStage2(b, cmake_tc);
     b.step("run-bs", "run bs").dependOn(cmake_install_path.generated.file.step);
 }
-
-pub const Toolchain = struct {
-    CC: LazyPath = .{ .cwd_relative = "cc" },
-    CXX: LazyPath = .{ .cwd_relative = "c++" },
-    CMAKE: LazyPath = .{ .cwd_relative = "cmake" },
-    MAKE: LazyPath = .{ .cwd_relative = "make" },
-    pub fn zigBuildDefaults(self: *Toolchain, b: *std.Build) void {
-        const native = b.resolveTargetQuery(.{});
-        const zig_cc = b.addExecutable(.{
-            .name = "cc",
-            .root_source_file = .{ .cwd_relative = "src/cc.zig" },
-            .target = native,
-            .optimize = .Debug,
-        });
-        self.CC = zig_cc.getEmittedBin();
-        const zig_cxx = b.addExecutable(.{
-            .name = "cxx",
-            .root_source_file = .{ .cwd_relative = "src/cxx.zig" },
-            .target = native,
-        });
-        self.CXX = zig_cxx.getEmittedBin();
-    }
-};
 
 pub fn cmakeStage2(b: *std.Build, tc: Toolchain) std.Build.LazyPath {
     const bs_run = std.Build.Step.Run.create(b, "cmake_stage2");
