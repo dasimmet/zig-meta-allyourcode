@@ -102,7 +102,7 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             .install_subdir = "",
         });
         cmake2_install.step.dependOn(&cmake_step.step);
-        b.step("cmake", "run bootstrap stage2 and install").dependOn(&cmake2_install.step);
+        b.step("cmake", "run cmake bootstrap stage2 and install").dependOn(&cmake2_install.step);
     }
 }
 

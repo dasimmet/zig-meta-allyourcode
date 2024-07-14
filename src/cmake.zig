@@ -89,6 +89,7 @@ pub fn stage2(b: *std.Build, tc: Toolchain) *CMakeStep {
         .{ "CMAKE_MAN_DIR", "" },
         .{ "CMAKE_USE_SYSTEM_LIBRARIES", "0" },
         .{ "CMAKE_XDGDATA_DIR", "" },
+        .{ "CMAKE_SIZEOF_VOID_P", "8" },
     }) |arg| {
         cmakeStep.addCmakeDefine(arg[0], arg[1]);
     }
