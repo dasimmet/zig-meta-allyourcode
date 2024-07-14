@@ -1,3 +1,5 @@
 const cc = @import("cc.zig");
 
-pub const main = cc.main;
+pub fn main() !void {
+    return cc.subcommand("c++");
+}

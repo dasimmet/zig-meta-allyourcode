@@ -1,5 +1,6 @@
 const std = @import("std");
 const LibUV = @import("cmake_libuv.zig");
+const LazyPath = std.Build.LazyPath;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -27,10 +28,12 @@ pub fn build(b: *std.Build) void {
     cmake_bootstrap.addCSourceFiles(.{
         .files = CMAKE_CXX_SOURCES,
         .root = b.path("Source"),
+        .flags = &CFLAGS,
     });
     cmake_bootstrap.addCSourceFiles(.{
         .files = CMAKE_UTILITY_SOURCES,
         .root = b.path("Utilities"),
+        .flags = &CFLAGS,
     });
     b.installArtifact(cmake_bootstrap);
     const run = b.addRunArtifact(cmake_bootstrap);
@@ -60,6 +63,14 @@ pub fn build(b: *std.Build) void {
     b.step("run-bs", "run bs").dependOn(cmake_install_path.generated.file.step);
 }
 
+pub const Toolchain = struct {
+    CC: ?LazyPath,
+    CXX: ?LazyPath,
+    CMAKE: ?LazyPath,
+    ZIG: ?LazyPath,
+    MAKE: ?LazyPath = .{ .cwd_relative = "make" },
+};
+
 pub fn cmakeStage2(b: *std.Build, bootstrap_exe: *std.Build.Step.Compile) std.Build.LazyPath {
     const bs_run = b.addRunArtifact(bootstrap_exe);
     const stage2_path = b.makeTempPath();
@@ -72,18 +83,17 @@ pub fn cmakeStage2(b: *std.Build, bootstrap_exe: *std.Build.Step.Compile) std.Bu
     const native = b.resolveTargetQuery(.{});
     const zig_cc = b.addExecutable(.{
         .name = "cc",
-        .root_source_file = b.path("src/cc.zig"),
+        .root_source_file = .{ .cwd_relative = "src/cc.zig" },
         .target = native,
         .optimize = .Debug,
     });
     const zig_cxx = b.addExecutable(.{
         .name = "cxx",
-        .root_source_file = b.path("src/cxx.zig"),
+        .root_source_file = .{ .cwd_relative = "src/cxx.zig" },
         .target = native,
-        .optimize = .Debug,
     });
     inline for (.{
-        .{ "-DCMAKE_CC_COMPILER=", zig_cc.getEmittedBin() },
+        .{ "-DCMAKE_C_COMPILER=", zig_cc.getEmittedBin() },
         .{ "-DCMAKE_CXX_COMPILER=", zig_cxx.getEmittedBin() },
     }) |it| {
         bs_run.addPrefixedDirectoryArg(it[0], it[1]);
@@ -138,7 +148,7 @@ pub const LibRHash = struct {
         librh.addCSourceFiles(.{
             .files = Self.C_SOURCES,
             .root = b.path("Utilities/cmlibrhash/librhash"),
-            .flags = &.{"-DNO_IMPORT_EXPORT"},
+            .flags = &(.{"-DNO_IMPORT_EXPORT"} ++ CFLAGS),
         });
         librh.addIncludePath(b.path("Utilities/cmlibrhash/librhash"));
         librh.addIncludePath(b.path("Utilities"));
@@ -179,7 +189,7 @@ pub const KwSys = struct {
         kwsys.addCSourceFiles(.{
             .files = Self.CXX_SOURCES,
             .root = b.path("Source/kwsys"),
-            .flags = &.{},
+            .flags = &CFLAGS,
         });
         return kwsys;
     }
@@ -200,6 +210,24 @@ pub const KwSys = struct {
     };
 };
 
+const CFLAGS = .{
+    "-DNDEBUG",
+    "-fno-common",
+    "-O3",
+    "-W",
+    "-Wall",
+    "-Wcast-align",
+    "-Wchar-subscripts",
+    "-Werror-implicit-function-declaration",
+    "-Wformat-security",
+    "-Wformat",
+    "-Wmissing-format-attribute",
+    "-Wnon-virtual-dtor",
+    "-Wpointer-arith",
+    "-Wshadow",
+    "-Wundef",
+    "-Wwrite-strings",
+};
 const CMAKE_UTILITY_SOURCES = &.{
     "cmjsoncpp/src/lib_json/json_reader.cpp",
     "cmjsoncpp/src/lib_json/json_value.cpp",
@@ -452,6 +480,7 @@ const CMAKE_CXX_SOURCES = &.{
     "cmVersion.cxx",
     "cmWhileCommand.cxx",
     "cmWindowsRegistry.cxx",
+    // "cmsys/RegularExpression.cxx",
     "cmWorkingDirectory.cxx",
     "cmXcFramework.cxx",
     "LexerParser/cmListFileLexer.c",

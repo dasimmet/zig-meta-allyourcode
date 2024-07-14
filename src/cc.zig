@@ -34,8 +34,18 @@ pub fn subcommand(cmd: []const u8) !void {
     switch (res) {
         .Exited => 
             std.process.exit(res.Exited),
-        else => {
+        .Signal => {
+            std.debug.print("Signal Received: {}\n", .{res.Signal});
             unreachable;
-        }
+        },
+        .Stopped => {
+            std.debug.print("Stopped: {}\n", .{res.Stopped});
+            unreachable;
+
+        },
+        .Unknown => {
+            std.debug.print("Unknown: {}\n", .{res.Stopped});
+            unreachable;
+        },
     }
 }
