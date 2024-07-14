@@ -29,9 +29,9 @@ pub fn build(b: *std.Build) void {
         addCmakeBuild(b, defaults);
         addLibGitBuild(b, defaults);
     }
-    const clean = b.addRemoveDirTree(b.cache_root.path.?);
+    const clean = b.addRemoveDirTree(.{ .cwd_relative = b.cache_root.path.? });
     b.step("clean", "clean").dependOn(&clean.step);
-    const clean_glob = b.addRemoveDirTree(b.graph.global_cache_root.path.?);
+    const clean_glob = b.addRemoveDirTree(.{ .cwd_relative = b.graph.global_cache_root.path.? });
     b.step("clean-glob", "clean").dependOn(&clean_glob.step);
 }
 
@@ -84,6 +84,14 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
         var cmake_tc = cmake.Toolchain{};
         cmake_tc.zigBuildDefaults(b);
         cmake_tc.CMAKE = dep.artifact("cmake").getEmittedBin();
+
+        // if (b.lazyDependency("gnumake", .{
+        //     .target = cmake_options.target,
+        //     .optimize = cmake_options.optimize,
+        // })) |gnumake| {
+        //     cmake_tc.MAKE = gnumake.artifact("make").getEmittedBin();
+        // }
+
         const cmake_install_path = cmake.cmakeStage2(
             dep.builder,
             cmake_tc,
