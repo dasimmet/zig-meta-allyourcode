@@ -87,10 +87,11 @@ pub fn cmakeStage2(b: *std.Build, tc: Toolchain) std.Build.LazyPath {
     inline for (.{
         .{ "-DCMAKE_C_COMPILER=", tc.CC },
         .{ "-DCMAKE_CXX_COMPILER=", tc.CXX },
+        .{ "-DCMAKE_MAKE_PROCESSOR=", tc.MAKE },
     }) |it| {
         bs_run.addPrefixedDirectoryArg(it[0], it[1]);
     }
-    bs_run.setEnvironmentVariable("ZIG", b.graph.zig_exe);
+    bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
     inline for (.{
         "-DBUILD_CMAKE_FROM_SOURCE=1",
         "-DCMAKE_BIN_DIR=",

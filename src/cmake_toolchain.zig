@@ -6,8 +6,10 @@ CC: LazyPath = .{ .cwd_relative = "cc" },
 CXX: LazyPath = .{ .cwd_relative = "c++" },
 CMAKE: LazyPath = .{ .cwd_relative = "cmake" },
 MAKE: LazyPath = .{ .cwd_relative = "make" },
+ZIG: []const u8 = "zig",
 
 pub fn zigBuildDefaults(self: *Toolchain, b: *std.Build) void {
+    self.ZIG = b.graph.zig_exe;
     const native = b.resolveTargetQuery(.{});
     const zig_cc = b.addExecutable(.{
         .name = "cc",
@@ -25,6 +27,7 @@ pub fn zigBuildDefaults(self: *Toolchain, b: *std.Build) void {
 }
 
 pub fn zigBuildDefaultsRelative(self: *Toolchain, b: *std.Build) void {
+    self.ZIG = b.graph.zig_exe;
     const native = b.resolveTargetQuery(.{});
     const zig_cc = b.addExecutable(.{
         .name = "cc",
