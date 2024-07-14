@@ -12,6 +12,11 @@
             .hash = "12208db692747f305b79ecfb3ac69e691d0b9584383ec4bcb0eb07b62b73de77b1cf",
             .lazy = true,
         },
+        .gnumake = .{
+            .url = "https://github.com/allyourcodebase/gnumake/archive/refs/heads/master.tar.gz",
+            .hash = "1220b1e121614a3978246c428ffe68f245d001e9a4bac22e196af215f1aba162b7b2",
+            .lazy = true,
+        },
     },
     .paths = .{
         "build.zig",
