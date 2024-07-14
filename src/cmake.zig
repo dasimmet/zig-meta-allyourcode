@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) void {
 
     const generated_headers = ConfigHeaders.build(b);
     cmake_bootstrap.addIncludePath(generated_headers);
-    cmake_bootstrap.addIncludePath(generated_headers.path(b, "cmsys"));
+    // cmake_bootstrap.addIncludePath(generated_headers.path(b, "cmsys"));
     cmake_bootstrap.addIncludePath(b.path("Source"));
     cmake_bootstrap.addIncludePath(b.path("Source/LexerParser"));
     cmake_bootstrap.addIncludePath(b.path("Utilities"));
@@ -26,14 +26,14 @@ pub fn build(b: *std.Build) void {
     cmake_bootstrap.addIncludePath(b.path("Utilities/std"));
 
     cmake_bootstrap.addCSourceFiles(.{
-        .files = CMAKE_CXX_SOURCES,
+        .files = &CMAKE_CXX_SOURCES,
         .root = b.path("Source"),
-        .flags = &CFLAGS,
+        .flags = &Flags.CXX,
     });
     cmake_bootstrap.addCSourceFiles(.{
-        .files = CMAKE_UTILITY_SOURCES,
+        .files = &CMAKE_UTILITY_SOURCES,
         .root = b.path("Utilities"),
-        .flags = &CFLAGS,
+        .flags = &Flags.CXX,
     });
     b.installArtifact(cmake_bootstrap);
     const run = b.addRunArtifact(cmake_bootstrap);
@@ -59,6 +59,12 @@ pub fn build(b: *std.Build) void {
         .generated_headers = generated_headers,
     });
     cmake_bootstrap.linkLibrary(kwsys);
+    const lexer = LexerParser.build(b, .{
+        .target = target,
+        .optimize = optimize,
+        .generated_headers = generated_headers,
+    });
+    cmake_bootstrap.linkLibrary(lexer);
     const cmake_install_path = cmakeStage2(b, cmake_bootstrap);
     b.step("run-bs", "run bs").dependOn(cmake_install_path.generated.file.step);
 }
@@ -107,16 +113,19 @@ pub fn cmakeStage2(b: *std.Build, bootstrap_exe: *std.Build.Step.Compile) std.Bu
 pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
     inline for (.{
         // kwsys
+        .{ "KWSYS_C_HAS_CLOCK_GETTIME_MONOTONIC", "0" },
         .{ "KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H", "0" },
         .{ "KWSYS_CXX_HAS_SETENV", "1" },
         .{ "KWSYS_CXX_HAS_UNSETENV", "1" },
         .{ "KWSYS_CXX_HAS_UTIMENSAT", "0" },
         .{ "KWSYS_CXX_HAS_UTIMES", "0" },
+        .{ "KWSYS_CXX_STAT_HAS_ST_MTIM", "0" },
+        .{ "KWSYS_CXX_STAT_HAS_ST_MTIMESPEC", "0" },
         .{ "KWSYS_NAMESPACE", "cmsys" },
-        .{ "KWSYS_STRING_C", null },
+        .{ "KWSYS_STRING_C", "1" },
         // cmake
         .{ "_FILE_OFFSET_BITS", "64" },
-        .{ "CMAKE_BOOTSTRAP", null },
+        .{ "CMAKE_BOOTSTRAP", "1" },
         .{ "CMAKE_BOOTSTRAP_BINARY_DIR", std.mem.join(
             b.allocator,
             "",
@@ -127,13 +136,46 @@ pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
             "",
             &.{ "\"", b.pathFromRoot(""), "\"" },
         ) catch @panic("OOM") },
-        .{ "CMAKE_BOOTSTRAP_MAKEFILES", null },
+        .{ "CMAKE_BOOTSTRAP_MAKEFILES", "1" },
         .{ "CMake_HAVE_CXX_MAKE_UNIQUE", "1" },
         .{ "CMake_HAVE_CXX_FILESYSTEM", "1" },
     }) |macro| {
         comp.defineCMacro(macro[0], macro[1]);
     }
 }
+
+pub const Flags = struct {
+    pub const COMMON = .{
+        "-DNDEBUG",
+        "-fno-common",
+        "-O3",
+        "-pedantic",
+        "-Wall",
+        "-Werror-implicit-function-declaration",
+        "-Werror",
+        "-Wextra",
+        // "-Wformat-nonliteral",
+        "-Wformat-security",
+        "-Wformat-y2k",
+        "-Wformat",
+        "-Wmissing-format-attribute",
+        "-Wno-error=unused-function",
+        "-Wno-error=unused-parameter",
+        "-Wno-error=unused",
+        "-Wnon-virtual-dtor",
+        "-Wpointer-arith",
+        "-Wshadow",
+        "-Wundef",
+        "-Wwrite-strings",
+        // "-Wno-error=cast-align",
+    };
+    pub const C = .{
+        "-std=c11",
+    } ++ COMMON;
+    pub const CXX = .{
+        "-std=c++17",
+    } ++ COMMON;
+};
 
 pub const LibRHash = struct {
     const Self = @This();
@@ -148,7 +190,7 @@ pub const LibRHash = struct {
         librh.addCSourceFiles(.{
             .files = Self.C_SOURCES,
             .root = b.path("Utilities/cmlibrhash/librhash"),
-            .flags = &(.{"-DNO_IMPORT_EXPORT"} ++ CFLAGS),
+            .flags = &(.{"-DNO_IMPORT_EXPORT"} ++ Flags.C),
         });
         librh.addIncludePath(b.path("Utilities/cmlibrhash/librhash"));
         librh.addIncludePath(b.path("Utilities"));
@@ -187,14 +229,19 @@ pub const KwSys = struct {
         kwsys.addIncludePath(b.path("Source/LexerParser"));
         kwsys.addIncludePath(b.path("Utilities/std"));
         kwsys.addCSourceFiles(.{
-            .files = Self.CXX_SOURCES,
+            .files = &Self.CXX_SOURCES,
             .root = b.path("Source/kwsys"),
-            .flags = &CFLAGS,
+            .flags = &Flags.CXX,
+        });
+        kwsys.addCSourceFiles(.{
+            .files = &Self.C_SOURCES,
+            .root = b.path("Source/kwsys"),
+            .flags = &Flags.C,
         });
         return kwsys;
     }
 
-    pub const CXX_SOURCES = &.{
+    pub const CXX_SOURCES = .{
         "Directory.cxx",
         "EncodingCXX.cxx",
         "FStream.cxx",
@@ -202,6 +249,8 @@ pub const KwSys = struct {
         "RegularExpression.cxx",
         "Status.cxx",
         "SystemTools.cxx",
+    };
+    pub const C_SOURCES = .{
         "EncodingC.c",
         "ProcessUNIX.c",
         "String.c",
@@ -210,30 +259,12 @@ pub const KwSys = struct {
     };
 };
 
-const CFLAGS = .{
-    "-DNDEBUG",
-    "-fno-common",
-    "-O3",
-    "-W",
-    "-Wall",
-    "-Wcast-align",
-    "-Wchar-subscripts",
-    "-Werror-implicit-function-declaration",
-    "-Wformat-security",
-    "-Wformat",
-    "-Wmissing-format-attribute",
-    "-Wnon-virtual-dtor",
-    "-Wpointer-arith",
-    "-Wshadow",
-    "-Wundef",
-    "-Wwrite-strings",
-};
-const CMAKE_UTILITY_SOURCES = &.{
+const CMAKE_UTILITY_SOURCES = .{
     "cmjsoncpp/src/lib_json/json_reader.cpp",
     "cmjsoncpp/src/lib_json/json_value.cpp",
     "cmjsoncpp/src/lib_json/json_writer.cpp",
 };
-const CMAKE_CXX_SOURCES = &.{
+const CMAKE_CXX_SOURCES = .{
     "cm_fileno.cxx",
     "cmAddCompileDefinitionsCommand.cxx",
     "cmAddCustomCommandCommand.cxx",
@@ -480,15 +511,50 @@ const CMAKE_CXX_SOURCES = &.{
     "cmVersion.cxx",
     "cmWhileCommand.cxx",
     "cmWindowsRegistry.cxx",
-    // "cmsys/RegularExpression.cxx",
     "cmWorkingDirectory.cxx",
     "cmXcFramework.cxx",
-    "LexerParser/cmListFileLexer.c",
-    "LexerParser/cmCommandArgumentLexer.cxx",
-    "LexerParser/cmCommandArgumentParser.cxx",
-    "LexerParser/cmExprLexer.cxx",
-    "LexerParser/cmExprParser.cxx",
-    "LexerParser/cmGccDepfileLexer.cxx",
+    // "LexerParser/cmCommandArgumentLexer.cxx",
+    // "LexerParser/cmCommandArgumentParser.cxx",
+    // "LexerParser/cmExprLexer.cxx",
+    // "LexerParser/cmExprParser.cxx",
+    // "LexerParser/cmGccDepfileLexer.cxx",
+};
+
+pub const LexerParser = struct {
+    pub fn build(b: *std.Build, opt: anytype) *std.Build.Step.Compile {
+        const lexer = b.addStaticLibrary(.{
+            .name = "LexerParser",
+            .target = opt.target,
+            .optimize = opt.optimize,
+        });
+        lexer.linkLibC();
+        lexer.linkLibCpp();
+        addMacros(b, lexer);
+        lexer.addIncludePath(opt.generated_headers);
+        lexer.addIncludePath(b.path("Source"));
+        lexer.addIncludePath(b.path("Utilities"));
+        lexer.addCSourceFiles(.{
+            .files = &C_SOURCES,
+            .flags = &Flags.C,
+            .root = b.path("Source/LexerParser"),
+        });
+        lexer.addCSourceFiles(.{
+            .files = &CXX_SOURCES,
+            .flags = &Flags.CXX,
+            .root = b.path("Source/LexerParser"),
+        });
+        return lexer;
+    }
+    pub const CXX_SOURCES = .{
+        "cmCommandArgumentLexer.cxx",
+        "cmCommandArgumentParser.cxx",
+        "cmExprLexer.cxx",
+        "cmExprParser.cxx",
+        "cmGccDepfileLexer.cxx",
+    };
+    pub const C_SOURCES = .{
+        "cmListFileLexer.c",
+    };
 };
 
 pub const ConfigHeaders = struct {
