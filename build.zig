@@ -81,9 +81,12 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             cm_step.dependOn(&cm_install.step);
         }
 
+        var cmake_tc = cmake.Toolchain{};
+        cmake_tc.zigBuildDefaults(b);
+        cmake_tc.CMAKE = dep.artifact("cmake").getEmittedBin();
         const cmake_install_path = cmake.cmakeStage2(
             dep.builder,
-            dep.artifact("cmake"),
+            cmake_tc,
         );
         b.installDirectory(.{
             .source_dir = cmake_install_path,

@@ -65,20 +65,40 @@ pub fn build(b: *std.Build) void {
         .generated_headers = generated_headers,
     });
     cmake_bootstrap.linkLibrary(lexer);
-    const cmake_install_path = cmakeStage2(b, cmake_bootstrap);
+    var cmake_tc = Toolchain{};
+    cmake_tc.zigBuildDefaults(b);
+    cmake_tc.CMAKE = cmake_bootstrap.getEmittedBin();
+    const cmake_install_path = cmakeStage2(b, cmake_tc);
     b.step("run-bs", "run bs").dependOn(cmake_install_path.generated.file.step);
 }
 
 pub const Toolchain = struct {
-    CC: ?LazyPath,
-    CXX: ?LazyPath,
-    CMAKE: ?LazyPath,
-    ZIG: ?LazyPath,
-    MAKE: ?LazyPath = .{ .cwd_relative = "make" },
+    CC: LazyPath = .{ .cwd_relative = "cc" },
+    CXX: LazyPath = .{ .cwd_relative = "c++" },
+    CMAKE: LazyPath = .{ .cwd_relative = "cmake" },
+    MAKE: LazyPath = .{ .cwd_relative = "make" },
+    pub fn zigBuildDefaults(self: *Toolchain, b: *std.Build) void {
+        const native = b.resolveTargetQuery(.{});
+        const zig_cc = b.addExecutable(.{
+            .name = "cc",
+            .root_source_file = .{ .cwd_relative = "src/cc.zig" },
+            .target = native,
+            .optimize = .Debug,
+        });
+        self.CC = zig_cc.getEmittedBin();
+        const zig_cxx = b.addExecutable(.{
+            .name = "cxx",
+            .root_source_file = .{ .cwd_relative = "src/cxx.zig" },
+            .target = native,
+        });
+        self.CXX = zig_cxx.getEmittedBin();
+    }
 };
 
-pub fn cmakeStage2(b: *std.Build, bootstrap_exe: *std.Build.Step.Compile) std.Build.LazyPath {
-    const bs_run = b.addRunArtifact(bootstrap_exe);
+pub fn cmakeStage2(b: *std.Build, tc: Toolchain) std.Build.LazyPath {
+    const bs_run = std.Build.Step.Run.create(b, "cmake_stage2");
+    bs_run.addFileArg(tc.CMAKE);
+    // const bs_run = b.addRunArtifact(bootstrap_exe);
     const stage2_path = b.makeTempPath();
     const stage2_path_arg = std.mem.join(b.allocator, "", &.{
         "-DCMAKE_DUMMY_CWD_ARG=",
@@ -86,28 +106,29 @@ pub fn cmakeStage2(b: *std.Build, bootstrap_exe: *std.Build.Step.Compile) std.Bu
     }) catch @panic("OOM");
     bs_run.setCwd(.{ .cwd_relative = stage2_path });
     bs_run.addDirectoryArg(b.path(""));
-    const native = b.resolveTargetQuery(.{});
-    const zig_cc = b.addExecutable(.{
-        .name = "cc",
-        .root_source_file = .{ .cwd_relative = "src/cc.zig" },
-        .target = native,
-        .optimize = .Debug,
-    });
-    const zig_cxx = b.addExecutable(.{
-        .name = "cxx",
-        .root_source_file = .{ .cwd_relative = "src/cxx.zig" },
-        .target = native,
-    });
     inline for (.{
-        .{ "-DCMAKE_C_COMPILER=", zig_cc.getEmittedBin() },
-        .{ "-DCMAKE_CXX_COMPILER=", zig_cxx.getEmittedBin() },
+        .{ "-DCMAKE_C_COMPILER=", tc.CC },
+        .{ "-DCMAKE_CXX_COMPILER=", tc.CXX },
     }) |it| {
         bs_run.addPrefixedDirectoryArg(it[0], it[1]);
     }
     bs_run.setEnvironmentVariable("ZIG", b.graph.zig_exe);
+    inline for (.{
+        "-DBUILD_CMAKE_FROM_SOURCE=1",
+        "-DCMAKE_BIN_DIR=",
+        "-DCMAKE_BOOTSTRAP=1",
+        "-DCMAKE_DATA_DIR=",
+        "-DCMAKE_DOC_DIR=",
+        "-DCMAKE_MAN_DIR=",
+        "-DCMAKE_USE_SYSTEM_LIBRARIES=0",
+        "-DCMAKE_XDGDATA_DIR=",
+    }) |arg| {
+        bs_run.addArg(arg);
+    }
     bs_run.addArg(stage2_path_arg);
     bs_run.has_side_effects = true;
-    return bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
+    const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
+    return cmake_output_dir;
 }
 
 pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
@@ -167,7 +188,6 @@ pub const Flags = struct {
         "-Wshadow",
         "-Wundef",
         "-Wwrite-strings",
-        // "-Wno-error=cast-align",
     };
     pub const C = .{
         "-std=c11",
@@ -513,11 +533,6 @@ const CMAKE_CXX_SOURCES = .{
     "cmWindowsRegistry.cxx",
     "cmWorkingDirectory.cxx",
     "cmXcFramework.cxx",
-    // "LexerParser/cmCommandArgumentLexer.cxx",
-    // "LexerParser/cmCommandArgumentParser.cxx",
-    // "LexerParser/cmExprLexer.cxx",
-    // "LexerParser/cmExprParser.cxx",
-    // "LexerParser/cmGccDepfileLexer.cxx",
 };
 
 pub const LexerParser = struct {
