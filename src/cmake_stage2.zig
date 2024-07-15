@@ -33,7 +33,6 @@ pub fn build(b: *std.Build, tc: Toolchain) std.Build.LazyPath {
         bs_run.addArg(arg);
     }
     bs_run.addArg(stage2_path_arg);
-    bs_run.has_side_effects = true;
     const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
     return cmake_output_dir;
 }
