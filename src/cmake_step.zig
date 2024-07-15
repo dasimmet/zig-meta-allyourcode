@@ -24,10 +24,6 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     bs_run.addFileArg(tc.CMAKE);
     // const bs_run = b.addRunArtifact(bootstrap_exe);
     const stage2_path = b.makeTempPath();
-    const stage2_path_arg = std.mem.join(b.allocator, "", &.{
-        "-DCMAKE_DUMMY_CWD_ARG=",
-        stage2_path,
-    }) catch @panic("OOM");
     bs_run.setCwd(.{ .cwd_relative = stage2_path });
     bs_run.addDirectoryArg(opt.source_dir);
     inline for (.{
@@ -38,7 +34,6 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
         bs_run.addPrefixedDirectoryArg(it[0], it[1]);
     }
     bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
-    bs_run.addArg(stage2_path_arg);
     const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
 
     const cmake_compile = Step.Run.create(b, "cmake_compile");
