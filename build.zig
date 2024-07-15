@@ -92,16 +92,16 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
         //     cmake_tc.MAKE = gnumake.artifact("make").getEmittedBin();
         // }
 
-        const cmake_install_path = cmake.Stage2.build(
+        const cmake_step = cmake.stage2(
             dep.builder,
             cmake_tc,
         );
         b.installDirectory(.{
-            .source_dir = cmake_install_path,
+            .source_dir = cmake_step.install_dir,
             .install_dir = .{ .custom = "cmake" },
             .install_subdir = "",
         });
-        b.step("run-bs", "run bs").dependOn(cmake_install_path.generated.file.step);
+        b.step("run-bs", "run bs").dependOn(&cmake_step.step);
     }
 }
 

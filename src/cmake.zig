@@ -2,7 +2,7 @@ const std = @import("std");
 const LibUV = @import("cmake_libuv.zig");
 const LazyPath = std.Build.LazyPath;
 pub const Toolchain = @import("cmake_toolchain.zig");
-pub const Stage2 = @import("cmake_stage2.zig");
+pub const CMakeStep = @import("cmake_step.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -70,8 +70,17 @@ pub fn build(b: *std.Build) void {
     var cmake_tc = Toolchain{};
     cmake_tc.zigBuildDefaultsRelative(b);
     cmake_tc.CMAKE = cmake_bootstrap.getEmittedBin();
-    const cmake_install_path = Stage2.build(b, cmake_tc);
-    b.step("run-bs", "run bs").dependOn(cmake_install_path.generated.file.step);
+    const cmake_stage2_step = stage2(b, cmake_tc);
+    b.step("run-bs", "run bs").dependOn(&cmake_stage2_step.step);
+}
+
+pub fn stage2(b: *std.Build, tc: Toolchain) *CMakeStep {
+    const cmakeStep = CMakeStep.init(b, .{
+        .toolchain = tc,
+        .name = "cmake_stage2",
+        .source_dir = b.path(""),
+    });
+    return cmakeStep;
 }
 
 pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
