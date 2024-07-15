@@ -13,12 +13,14 @@ compile: *Step.Run,
 toolchain: Toolchain,
 
 const Options = struct {
+    target: std.Build.ResolvedTarget,
     name: []const u8,
     source_dir: LazyPath,
     toolchain: Toolchain = .{},
 };
 
 pub fn init(b: *std.Build, opt: Options) *CmakeStep {
+    const target_triple = opt.target.result.zigTriple(b.allocator) catch @panic("OOM");
     const tc = opt.toolchain;
     const bs_run = std.Build.Step.Run.create(b, "cmake_stage2");
     bs_run.addFileArg(tc.CMAKE);
@@ -29,8 +31,10 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
         .{ "-DCMAKE_C_COMPILER=", tc.CC },
         .{ "-DCMAKE_CXX_COMPILER=", tc.CXX },
         .{ "-DCMAKE_MAKE_PROCESSOR=", tc.MAKE },
+        .{ "-DCMAKE_C_COMPILER_TARGET=", .{ .cwd_relative = target_triple } },
+        .{ "-DCMAKE_CXX_COMPILER_TARGET=", .{ .cwd_relative = target_triple } },
     }) |it| {
-        bs_run.addPrefixedDirectoryArg(it[0], it[1]);
+        bs_run.addPrefixedFileArg(it[0], it[1]);
     }
     bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
     const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");

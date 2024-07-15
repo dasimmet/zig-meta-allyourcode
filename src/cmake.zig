@@ -75,6 +75,7 @@ pub fn build(b: *std.Build) void {
 
 pub fn stage2(b: *std.Build, tc: Toolchain) *CMakeStep {
     const cmakeStep = CMakeStep.init(b, .{
+        .target = b.resolveTargetQuery(.{}),
         .toolchain = tc,
         .name = "cmake_stage2",
         .source_dir = b.path(""),
