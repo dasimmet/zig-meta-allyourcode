@@ -80,6 +80,19 @@ pub fn stage2(b: *std.Build, tc: Toolchain) *CMakeStep {
         .name = "cmake_stage2",
         .source_dir = b.path(""),
     });
+
+    inline for (.{
+        .{ "BUILD_CMAKE_FROM_SOURCE", "1" },
+        .{ "CMAKE_BIN_DIR", "" },
+        .{ "CMAKE_BOOTSTRAP", "1" },
+        .{ "CMAKE_DATA_DIR", "" },
+        .{ "CMAKE_DOC_DIR", "" },
+        .{ "CMAKE_MAN_DIR", "" },
+        .{ "CMAKE_USE_SYSTEM_LIBRARIES", "0" },
+        .{ "CMAKE_XDGDATA_DIR", "" },
+    }) |arg| {
+        cmakeStep.addCmakeDefine(arg[0], arg[1]);
+    }
     return cmakeStep;
 }
 

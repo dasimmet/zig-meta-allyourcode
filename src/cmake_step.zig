@@ -38,18 +38,6 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
         bs_run.addPrefixedDirectoryArg(it[0], it[1]);
     }
     bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
-    inline for (.{
-        "-DBUILD_CMAKE_FROM_SOURCE=1",
-        "-DCMAKE_BIN_DIR=",
-        "-DCMAKE_BOOTSTRAP=1",
-        "-DCMAKE_DATA_DIR=",
-        "-DCMAKE_DOC_DIR=",
-        "-DCMAKE_MAN_DIR=",
-        "-DCMAKE_USE_SYSTEM_LIBRARIES=0",
-        "-DCMAKE_XDGDATA_DIR=",
-    }) |arg| {
-        bs_run.addArg(arg);
-    }
     bs_run.addArg(stage2_path_arg);
     const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
 
@@ -78,6 +66,7 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
             .makeFn = make,
         }),
     };
+    self.step.dependOn(&cmake_compile.step);
     return self;
 }
 
