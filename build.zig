@@ -66,7 +66,7 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
 
     if (b.lazyDependency("cmake", cmake_options)) |dep| {
         cmake.build(dep.builder);
-        const cm_step = b.step("cmake", "build the cmake exe");
+        const cm_step = b.step("cmake-bs", "build the cmake stage1 exe");
         inline for (.{ "cmake", "uv" }) |f| {
             const cm_art = dep.artifact(f);
             const cm_name = if (cm_art.kind == .lib)
@@ -102,7 +102,7 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             .install_subdir = "",
         });
         cmake2_install.step.dependOn(&cmake_step.step);
-        b.step("run-bs", "run bs").dependOn(&cmake_step.step);
+        b.step("cmake", "run bootstrap stage2 and install").dependOn(&cmake2_install.step);
     }
 }
 

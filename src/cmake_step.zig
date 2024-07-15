@@ -81,3 +81,9 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     self.step.dependOn(&cleanup.step);
     return self;
 }
+
+pub fn addCmakeDefine(self: *CmakeStep, key: []const u8, value: []const u8) void {
+    const b = self.step.owner;
+    const option = std.fmt.allocPrint(b.allocator, "-D{s}={s}", .{ key, value }) catch @panic("OOM");
+    self.generate.addArg(option);
+}
