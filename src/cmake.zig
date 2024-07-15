@@ -19,7 +19,6 @@ pub fn build(b: *std.Build) void {
 
     const generated_headers = ConfigHeaders.build(b);
     cmake_bootstrap.addIncludePath(generated_headers);
-    // cmake_bootstrap.addIncludePath(generated_headers.path(b, "cmsys"));
     cmake_bootstrap.addIncludePath(b.path("Source"));
     cmake_bootstrap.addIncludePath(b.path("Source/LexerParser"));
     cmake_bootstrap.addIncludePath(b.path("Utilities"));
@@ -616,8 +615,6 @@ pub const ConfigHeaders = struct {
             .{ "Source/kwsys/Terminal.h.in", "cmsys/Terminal.h" },
             .{ "Utilities/cmThirdParty.h.in", "cmThirdParty.h" },
             .{ "Utilities/std/cmSTL.hxx.in", "cmSTL.hxx" },
-            // .{ "Source/kwsys/DynamicLoader.hxx.in", "cmsys/DynamicLoader.hxx" },
-            // .{ "Source/kwsys/testSystemTools.h.in", "cmsys/testSystemTools.h" },
         }) |tpl| {
             acc.append(b.addConfigHeader(.{
                 .include_path = tpl[1],

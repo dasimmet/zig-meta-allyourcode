@@ -22,7 +22,6 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const tc = opt.toolchain;
     const bs_run = std.Build.Step.Run.create(b, "cmake_stage2");
     bs_run.addFileArg(tc.CMAKE);
-    // const bs_run = b.addRunArtifact(bootstrap_exe);
     const stage2_path = b.makeTempPath();
     bs_run.setCwd(.{ .cwd_relative = stage2_path });
     bs_run.addDirectoryArg(opt.source_dir);
