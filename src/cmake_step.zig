@@ -6,6 +6,7 @@ pub const Toolchain = @import("cmake_toolchain.zig");
 
 step: Step,
 source_dir: LazyPath,
+generate_dir: []const u8,
 install_dir: LazyPath,
 generate: *Step.Run,
 compile: *Step.Run,
@@ -57,15 +58,15 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     cmake_compile.setEnvironmentVariable("ZIG", opt.toolchain.ZIG);
     const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
     const makeflags = std.fmt.allocPrint(b.allocator, "-j{d}", .{cpu_count}) catch @panic("OOM");
+    cmake_compile.setCwd(.{ .cwd_relative = stage2_path });
     cmake_compile.setEnvironmentVariable("MAKEFLAGS", makeflags);
     cmake_compile.addFileArg(opt.toolchain.MAKE);
-    cmake_compile.addArg("-C");
-    cmake_compile.addArg(stage2_path);
     cmake_compile.addArg("install");
 
     const self = b.allocator.create(CmakeStep) catch @panic("OOM");
     self.* = .{
         .source_dir = opt.source_dir,
+        .generate_dir = stage2_path,
         .install_dir = cmake_output_dir,
         .generate = bs_run,
         .compile = cmake_compile,
@@ -74,11 +75,9 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
             .id = .custom,
             .name = opt.name,
             .owner = b,
+            .makeFn = make,
         }),
     };
-    const cleanup = b.addRemoveDirTree(.{ .cwd_relative = stage2_path });
-    cleanup.step.dependOn(&cmake_compile.step);
-    self.step.dependOn(&cleanup.step);
     return self;
 }
 
@@ -86,4 +85,10 @@ pub fn addCmakeDefine(self: *CmakeStep, key: []const u8, value: []const u8) void
     const b = self.step.owner;
     const option = std.fmt.allocPrint(b.allocator, "-D{s}={s}", .{ key, value }) catch @panic("OOM");
     self.generate.addArg(option);
+}
+
+fn make(step: *Step, prog_node: std.Progress.Node) anyerror!void {
+    const self: *CmakeStep = @fieldParentPtr("step", step);
+    _ = prog_node;
+    try std.fs.deleteDirAbsolute(self.generate_dir);
 }
