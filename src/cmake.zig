@@ -67,16 +67,15 @@ pub fn build(b: *std.Build) void {
         .generated_headers = generated_headers,
     });
     cmake_bootstrap.linkLibrary(lexer);
-    var cmake_tc = Toolchain{};
-    cmake_tc.zigBuildDefaultsRelative(b);
+    var cmake_tc = Toolchain.zigBuildDefaultsRelative(b);
     cmake_tc.CMAKE = cmake_bootstrap.getEmittedBin();
     const cmake_stage2_step = stage2(b, cmake_tc);
     b.step("run-bs", "run bs").dependOn(&cmake_stage2_step.step);
 }
 
-pub fn stage2(b: *std.Build, tc: Toolchain) *CMakeStep {
+pub fn stage2(b: *std.Build, tc: *Toolchain) *CMakeStep {
     const cmakeStep = CMakeStep.init(b, .{
-        .toolchain = tc,
+        .toolchain = tc.*,
         .name = "cmake_stage2",
         .source_dir = b.path(""),
     });

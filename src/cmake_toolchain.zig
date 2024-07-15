@@ -8,7 +8,8 @@ CMAKE: LazyPath = .{ .cwd_relative = "cmake" },
 MAKE: LazyPath = .{ .cwd_relative = "make" },
 ZIG: []const u8 = "zig",
 
-pub fn zigBuildDefaults(self: *Toolchain, b: *std.Build) void {
+pub fn zigBuildDefaults(b: *std.Build) *Toolchain {
+    const self = b.allocator.create(Toolchain) catch @panic("OOM");
     self.ZIG = b.graph.zig_exe;
     const native = b.resolveTargetQuery(.{});
     const zig_cc = b.addExecutable(.{
@@ -24,9 +25,11 @@ pub fn zigBuildDefaults(self: *Toolchain, b: *std.Build) void {
         .target = native,
     });
     self.CXX = zig_cxx.getEmittedBin();
+    return self;
 }
 
-pub fn zigBuildDefaultsRelative(self: *Toolchain, b: *std.Build) void {
+pub fn zigBuildDefaultsRelative(b: *std.Build) *Toolchain {
+    const self = b.allocator.create(Toolchain) catch @panic("OOM");
     self.ZIG = b.graph.zig_exe;
     const native = b.resolveTargetQuery(.{});
     const zig_cc = b.addExecutable(.{
@@ -42,4 +45,5 @@ pub fn zigBuildDefaultsRelative(self: *Toolchain, b: *std.Build) void {
         .target = native,
     });
     self.CXX = zig_cxx.getEmittedBin();
+    return self;
 }
