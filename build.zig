@@ -96,11 +96,12 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             dep.builder,
             cmake_tc,
         );
-        b.installDirectory(.{
+        const cmake2_install = b.addInstallDirectory(.{
             .source_dir = cmake_step.install_dir,
             .install_dir = .{ .custom = "cmake" },
             .install_subdir = "",
         });
+        cmake2_install.step.dependOn(&cmake_step.step);
         b.step("run-bs", "run bs").dependOn(&cmake_step.step);
     }
 }

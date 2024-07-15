@@ -55,6 +55,9 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const cmake_compile = Step.Run.create(b, "cmake_compile");
     cmake_compile.step.dependOn(&bs_run.step);
     cmake_compile.setEnvironmentVariable("ZIG", opt.toolchain.ZIG);
+    const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
+    const makeflags = std.fmt.allocPrint(b.allocator, "-j{d}", .{cpu_count}) catch @panic("OOM");
+    cmake_compile.setEnvironmentVariable("MAKEFLAGS", makeflags);
     cmake_compile.addFileArg(opt.toolchain.MAKE);
     cmake_compile.addArg("-C");
     cmake_compile.addArg(stage2_path);
@@ -73,6 +76,8 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
             .owner = b,
         }),
     };
-    self.step.dependOn(&self.compile.step);
+    const cleanup = b.addRemoveDirTree(.{ .cwd_relative = stage2_path });
+    cleanup.step.dependOn(&cmake_compile.step);
+    self.step.dependOn(&cleanup.step);
     return self;
 }
