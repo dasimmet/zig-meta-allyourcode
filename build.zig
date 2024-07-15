@@ -92,7 +92,7 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
         //     cmake_tc.MAKE = gnumake.artifact("make").getEmittedBin();
         // }
 
-        const cmake_install_path = cmake.cmakeStage2(
+        const cmake_install_path = cmake.Stage2.build(
             dep.builder,
             cmake_tc,
         );
