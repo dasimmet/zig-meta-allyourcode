@@ -6,18 +6,12 @@
 const meta_allyourcode = @This();
 const std = @import("std");
 const builtin = @import("builtin");
-const FunctionStep = @import("src/FunctionStep.zig");
 
 pub fn build(b: *std.Build) void {
     const defaults: DefaultBuildOptions = .{
         .target = b.standardTargetOptions(.{}),
         .optimize = b.standardOptimizeOption(.{}),
     };
-    const func = FunctionStep.init(b, .{
-        .makeFunc = makeFunction,
-        .cacheFunc = cacheFunction,
-    });
-    b.step("func", "").dependOn(&func.step);
 
     if (b.option(
         []const u8,
@@ -129,19 +123,6 @@ pub const DefaultBuildOptions = struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 };
-
-fn cacheFunction(args: *FunctionStep.Args) anyerror!void {
-    var rand = std.Random.DefaultPrng.init(@as(u64, @bitCast(std.time.milliTimestamp())));
-    args.man.hash.add(rand.random().int(u64));
-}
-
-fn makeFunction(args: *FunctionStep.Args) anyerror!void {
-    std.debug.print("NOT CACHED:{s}\nLOCAL:{s}\nGLOBAL:{s}\n", .{
-        args.globalDir(),
-        args.hash.path.?,
-        args.globalDir(),
-    });
-}
 
 pub const lazy = struct {
     pub fn dependency(b: *std.Build, name: []const u8, args: anytype) ?*std.Build.Dependency {
