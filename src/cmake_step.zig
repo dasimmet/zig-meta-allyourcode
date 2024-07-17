@@ -74,8 +74,8 @@ pub fn addCmakeDefine(self: *CmakeStep, key: []const u8, value: []const u8) void
     self.generate.addArg(option);
 }
 
-fn make(step: *Step, prog_node: std.Progress.Node) anyerror!void {
+fn make(step: *Step, opt: std.Build.Step.MakeOptions) anyerror!void {
     const self: *CmakeStep = @fieldParentPtr("step", step);
-    _ = prog_node;
+    _ = opt;
     try std.fs.deleteTreeAbsolute(self.generate_dir);
 }
