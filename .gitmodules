@@ -1,3 +1,6 @@
 [submodule "submodule/cmake"]
 	path = submodule/cmake
 	url = https://github.com/Kitware/CMake.git
+[submodule "submodule/gnumake"]
+	path = submodule/gnumake
+	url = https://github.com/allyourcodebase/gnumake.git
