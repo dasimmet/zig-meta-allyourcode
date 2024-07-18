@@ -13,14 +13,14 @@ pub fn zigBuildDefaults(self: *Toolchain, b: *std.Build) void {
     const native = b.resolveTargetQuery(.{});
     const zig_cc = b.addExecutable(.{
         .name = "cc",
-        .root_source_file = b.path("src/cc.zig"),
+        .root_source_file = b.path("src/host/cc.zig"),
         .target = native,
         .optimize = .Debug,
     });
     self.CC = zig_cc.getEmittedBin();
     const zig_cxx = b.addExecutable(.{
         .name = "cxx",
-        .root_source_file = b.path("src/cxx.zig"),
+        .root_source_file = b.path("src/host/cxx.zig"),
         .target = native,
     });
     self.CXX = zig_cxx.getEmittedBin();
