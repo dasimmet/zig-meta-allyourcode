@@ -2,7 +2,7 @@ const std = @import("std");
 const Step = std.Build.Step;
 const LazyPath = std.Build.LazyPath;
 const CmakeStep = @This();
-pub const Toolchain = @import("cmake_toolchain.zig");
+pub const Toolchain = @import("toolchain.zig");
 
 step: Step,
 source_dir: LazyPath,

@@ -1,7 +1,7 @@
 const LibUV = @This();
 const Self = LibUV;
 const std = @import("std");
-const cmake = @import("cmake.zig");
+const cmake = @import("../cmake.zig");
 
 pub fn build(b: *std.Build, opt: anytype) *std.Build.Step.Compile {
     const libuv = b.addStaticLibrary(.{

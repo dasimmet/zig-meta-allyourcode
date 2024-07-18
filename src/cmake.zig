@@ -1,8 +1,8 @@
 const std = @import("std");
-const LibUV = @import("cmake_libuv.zig");
+const LibUV = @import("cmake/libuv.zig");
 const LazyPath = std.Build.LazyPath;
-pub const Toolchain = @import("cmake_toolchain.zig");
-pub const CMakeStep = @import("cmake_step.zig");
+pub const Toolchain = @import("cmake/toolchain.zig");
+pub const CMakeStep = @import("cmake/step.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
