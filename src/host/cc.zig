@@ -2,34 +2,35 @@ const std = @import("std");
 
 // run a zig cc subcommand with ZIG from env
 pub fn main() !void {
-    return subcommand("cc");
+    return subcommand("ZIG", &.{"cc"});
 }
-pub fn subcommand(cmd: []const u8) !void {
+
+pub fn subcommand(env_key: []const u8, cmd: []const []const u8) !void {
     const stderr = std.io.getStdErr();
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     var env = try std.process.getEnvMap(arena.allocator());
     var args = std.ArrayList([]const u8).init(arena.allocator());
-    var zig_found = false;
-    if (env.get("ZIG")) |zig_exe| {
-        try args.append(zig_exe);
-        zig_found = true;
+    var subcommand_found = false;
+    if (env.get(env_key)) |subcommand_exe| {
+        try args.append(subcommand_exe);
+        subcommand_found = true;
     }
-    try args.append(cmd);
+    try args.appendSlice(cmd);
     var p_args = std.process.args();
     var i: usize = 0;
     while (p_args.next()) |arg| : (i += 1) {
         if (i == 0) {
-            if (!zig_found) {
+            if (!subcommand_found) {
                 const message =
                     \\
                     \\Error: this executable ({s}) needs the
-                    \\ZIG environment variable pointing to the zig compiler,
-                    \\so it can run "zig {s}"
+                    \\{s} environment variable pointing to the subcommand executable,
+                    \\so it can run "{s} {s}"
                     \\
                     \\
                 ;
-                try stderr.writer().print(message, .{ arg, cmd });
+                try stderr.writer().print(message, .{ arg, env_key, arg, cmd });
                 std.process.exit(1);
             }
         } else {
