@@ -16,5 +16,8 @@ and it will run the build as if committed to the cmake repository.
   - ✅ running bootstrap `cmake` to reconfigure itself with `CC=zig cc`
   - ✅ use zig built `make` to rebuild `cmake`
   - try to link cmake fully static
+  - fix any cacheing issues
+  - test other architectures
+  - test building other cmake projects
 - libgit2 ✅
   - build for wasm32-wasi

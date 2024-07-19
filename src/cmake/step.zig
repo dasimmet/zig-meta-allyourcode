@@ -53,7 +53,11 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     );
 
     const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
-    const make_parallel = std.fmt.allocPrint(b.allocator, "@GMAKE:-j{d}", .{cpu_count}) catch @panic("OOM");
+    const make_parallel = std.fmt.allocPrint(
+        b.allocator,
+        "@GMAKE:-j{d}",
+        .{cpu_count},
+    ) catch @panic("OOM");
 
     bs_run.addPrefixedFileArg("@GMAKE:", opt.toolchain.MAKE);
     bs_run.addPrefixedFileArg("@GMAKE:CC=", opt.toolchain.CC);
