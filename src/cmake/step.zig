@@ -21,7 +21,7 @@ pub const Options = struct {
 pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const target = opt.target orelse b.graph.host;
     const target_triple = target.result.zigTriple(b.allocator) catch @panic("OOM");
-    const tc = opt.toolchain.?;
+    const tc = opt.toolchain orelse Toolchain.zigBuildDefaults(b, null);
 
     const cpu_count = std.Thread.getCpuCount() catch blk: {
         std.log.err("Could not get CPU Count!", .{});
