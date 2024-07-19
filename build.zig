@@ -55,7 +55,7 @@ pub const DependencyBuild = enum {
     gnumake,
 
     pub const mapping = .{
-        .{ DependencyBuild.cmake, addCmakeBuild },
+        .{ DependencyBuild.cmake, addCMakeBootstrap },
         .{ DependencyBuild.libgit2, addLibGitBuild },
         .{ DependencyBuild.gnumake, addGnuMakeBuild },
     };
@@ -76,7 +76,7 @@ fn addLibGitBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
     }
 }
 
-fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
+fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
     const CMakeOptionsType: type = mergeStructFields(DefaultBuildOptions, cmake.ConfigHeaders.Options);
     var cmake_options: CMakeOptionsType = .{
         .target = defaults.target,

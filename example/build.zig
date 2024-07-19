@@ -15,6 +15,11 @@ pub fn build(b: *std.Build) void {
             .name = "cmake",
             .source_dir = sqlite3_dep.path(""),
         });
-        b.getInstallStep().dependOn(&cmakeStep.step);
+        const sqlite3_install = b.addInstallDirectory(.{
+            .install_dir = .{ .custom = "" },
+            .source_dir = cmakeStep.install_dir,
+            .install_subdir = "",
+        });
+        b.getInstallStep().dependOn(&sqlite3_install.step);
     }
 }
