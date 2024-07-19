@@ -3,14 +3,18 @@ const builtin = @import("builtin");
 
 // run a zig cc subcommand with ZIG from env
 pub fn main() !void {
+    const stderr = std.io.getStdErr();
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     var gen_args = std.ArrayList([]const u8).init(arena.allocator());
     var build_args = std.ArrayList([]const u8).init(arena.allocator());
     var p_args = std.process.args();
     var i: usize = 0;
+    var arg0: []const u8 = undefined;
     while (p_args.next()) |arg| : (i += 1) {
-        if (i == 0) {} else if (i == 1) { // path to CMAKE
+        if (i == 0) {
+            arg0 = arg;
+        } else if (i == 1) { // path to CMAKE
             try gen_args.append(arg);
         } else if (i == 2) { // path to GMAKE
             try build_args.append(arg);
@@ -27,6 +31,14 @@ pub fn main() !void {
             try gen_args.append(arg["@CMAKE:".len..]);
         } else if (std.mem.startsWith(u8, arg, "@GMAKE:")) {
             try build_args.append(arg["@GMAKE:".len..]);
+        } else {
+            const msg =
+                \\ unknown argument. this command "{s}" expects
+                \\ @CMAKE: or @GMAKE: prefixes on arguments: "{s}"
+                \\
+            ;
+            try stderr.writer().print(msg, .{ arg0, arg });
+            return error.UnknownArgument;
         }
     }
     for (gen_args.items) |it| {

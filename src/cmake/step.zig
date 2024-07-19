@@ -22,6 +22,13 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const target_triple = opt.target.result.zigTriple(b.allocator) catch @panic("OOM");
     const tc = opt.toolchain;
 
+    const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
+    const makeflags = std.fmt.allocPrint(
+        b.allocator,
+        "-j{d}",
+        .{cpu_count},
+    ) catch @panic("OOM");
+
     // we compile a simple tool to run both cmake and build step after one another,
     // and pass arguments for both to it
     // otherwise we cannot work with the zig cache, as cmake wants to know the output
@@ -33,7 +40,10 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
         .optimize = .Debug,
     });
     const bs_run = b.addRunArtifact(cm_runner);
+    bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
+    bs_run.setEnvironmentVariable("MAKEFLAGS", makeflags);
     if (b.verbose) bs_run.stdio = .inherit;
+
     bs_run.addFileArg(tc.CMAKE);
     bs_run.addFileArg(tc.MAKE);
     const build_dir = bs_run.addOutputDirectoryArg("build");
@@ -46,24 +56,11 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     }) |it| {
         bs_run.addPrefixedFileArg(it[0], it[1]);
     }
-    bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
     const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg(
         "@CMAKE:-DCMAKE_INSTALL_PREFIX=",
         "install",
     );
-
-    const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
-    const make_parallel = std.fmt.allocPrint(
-        b.allocator,
-        "@GMAKE:-j{d}",
-        .{cpu_count},
-    ) catch @panic("OOM");
-
-    bs_run.addPrefixedFileArg("@GMAKE:", opt.toolchain.MAKE);
-    bs_run.addPrefixedFileArg("@GMAKE:CC=", opt.toolchain.CC);
-    bs_run.addPrefixedFileArg("@GMAKE:CXX=", opt.toolchain.CXX);
     bs_run.addArg("@GMAKE:install");
-    bs_run.addArg(make_parallel);
 
     const self = b.allocator.create(CmakeStep) catch @panic("OOM");
     self.* = .{

@@ -52,7 +52,7 @@ pub fn subcommand(env_key: []const u8, cmd: []const []const u8) !void {
             std.log.err("Signal Received: {d}\n", .{sig});
             unreachable;
         },
-        .Stopped => |stop |{
+        .Stopped => |stop| {
             std.log.err("Stopped: {d}\n", .{stop});
             unreachable;
         },
