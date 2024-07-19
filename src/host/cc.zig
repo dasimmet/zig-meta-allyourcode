@@ -5,6 +5,7 @@ pub fn main() !void {
     return subcommand("ZIG", &.{"cc"});
 }
 
+// takes a path from the environment and calls its subcommand
 pub fn subcommand(env_key: []const u8, cmd: []const []const u8) !void {
     const stderr = std.io.getStdErr();
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);

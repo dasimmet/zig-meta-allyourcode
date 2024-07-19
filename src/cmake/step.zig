@@ -36,6 +36,7 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
         bs_run.addPrefixedFileArg(it[0], it[1]);
     }
     bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
+    bs_run.has_side_effects = true;
     const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
 
     const cmake_compile = Step.Run.create(b, "cmake_build");
@@ -48,7 +49,6 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
     const make_parallel = std.fmt.allocPrint(b.allocator, "-j{d}", .{cpu_count}) catch @panic("OOM");
     cmake_compile.addArg(make_parallel);
-    // cmake_compile.setEnvironmentVariable("MAKEFLAGS", makeflags);
 
     cmake_compile.addArg("install");
 
@@ -86,5 +86,4 @@ fn make(step: *Step, opt: std.Build.Step.MakeOptions) anyerror!void {
     const self: *CmakeStep = @fieldParentPtr("step", step);
     _ = opt;
     try std.fs.deleteTreeAbsolute(self.generate_dir);
-    return error.WOLOLO;
 }

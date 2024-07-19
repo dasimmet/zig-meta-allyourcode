@@ -83,9 +83,10 @@ pub fn stage2(b: *std.Build, tc: *Toolchain) *CMakeStep {
     inline for (.{
         .{ "BUILD_CMAKE_FROM_SOURCE", "1" },
         .{ "CMAKE_BIN_DIR", "" },
-        // .{ "CMAKE_BOOTSTRAP", "1" },
         .{ "CMAKE_DATA_DIR", "" },
         .{ "CMAKE_DOC_DIR", "" },
+        .{ "CMAKE_EXE_LINKER_FLAGS", "-static-libgcc -static-libstdc++"},
+        .{ "CMAKE_FIND_LIBRARY_SUFFIXES", ".a"},
         .{ "CMAKE_MAN_DIR", "" },
         .{ "CMAKE_SIZEOF_VOID_P", "8" },
         .{ "CMAKE_USE_OPENSSL", "0" },

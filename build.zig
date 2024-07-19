@@ -68,14 +68,13 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
         inline for (.{ "cmake", "uv" }) |f| {
             const cm_art = dep.artifact(f);
             const cm_name = if (cm_art.kind == .lib)
-                "cmake_" ++ f ++ ".so"
+                "cmake_bootstrap_" ++ f ++ ".so"
             else
-                "cmake_" ++ f;
+                "cmake_bootstrap_" ++ f;
 
             const cm_install = b.addInstallArtifact(cm_art, .{
                 .dest_sub_path = cm_name,
             });
-            b.getInstallStep().dependOn(&cm_install.step);
             cm_step.dependOn(&cm_install.step);
         }
 
@@ -101,6 +100,7 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             .install_subdir = "",
         });
         cmake2_install.step.dependOn(&cmake_step.step);
+        b.getInstallStep().dependOn(&cmake2_install.step);
         b.step("cmake", "run cmake bootstrap stage2 and install").dependOn(&cmake2_install.step);
     }
 }
