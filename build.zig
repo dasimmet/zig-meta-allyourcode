@@ -41,6 +41,8 @@ pub fn build(b: *std.Build) void {
     example.setCwd(b.path("example"));
     example.addArg(b.graph.zig_exe);
     example.addArg("build");
+    if (b.verbose) example.addArg("--verbose");
+
     b.step(
         "example",
         "build an example depending on this build",
@@ -117,7 +119,7 @@ fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             dep.builder,
             cmake_tc,
         );
-        _ = cmake_step.installDir(b);
+        _ = cmake_step.installDir(b, "cmake");
         const cmake2_install = b.addInstallDirectory(.{
             .source_dir = cmake_step.install_dir,
             .install_dir = .{ .custom = "cmake" },
