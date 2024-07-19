@@ -14,7 +14,7 @@ I'm still working out some cacheing issues, the cmake stage2 partially gets reru
 ```
 zig fetch --save https://github.com/dasimmet/zig-meta-allyourcode/archive/refs/heads/master.tar.gz
 ```
-build.zig (from <example/build.zig>)
+build.zig (from [example](./example/build.zig)):
 ```
 const meta_allyourcode = @import("meta_allyourcode");
 pub fn build() void {
@@ -24,14 +24,10 @@ pub fn build() void {
     .source_dir = b.path(""),
   });
   cmakeStep.addCmakeDefine("CMAKE_BUILD_TYPE","Release");
+  const install_step = cmakeStep.install(b, "");
+  b.getInstallStep().dependOn(&install_step.step);
 }
 ```
-
-## External `build.zig`
-
-the `src/cmake.zig` is my attempt at bootstrapping cmake with zig.
-The main `build.zig` will pass the `cmake` dependency to it's `build()` method,
-and it will run the build as if committed to the cmake repository.
 
 ## Ideas for integration
 
@@ -39,9 +35,9 @@ and it will run the build as if committed to the cmake repository.
   - ✅ stage1
   - ✅ running bootstrap `cmake` to reconfigure itself with `CC=zig cc`
   - ✅ use zig built `make` to rebuild `cmake`
+  - 🏃‍♂️ fix any cacheing issues
+  - 🏃‍♂️test building other cmake projects
   - try to link cmake fully static
-  - fix any cacheing issues
   - test other architectures
-  - test building other cmake projects
 - libgit2 ✅
   - build for wasm32-wasi
