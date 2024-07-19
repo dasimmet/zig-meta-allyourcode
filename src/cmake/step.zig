@@ -23,7 +23,11 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const target_triple = target.result.zigTriple(b.allocator) catch @panic("OOM");
     const tc = opt.toolchain.?;
 
-    const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
+    const cpu_count = std.Thread.getCpuCount() catch blk: {
+        std.log.err("Could not get CPU Count!", .{});
+        break :blk 4;
+    };
+
     const makeflags = std.fmt.allocPrint(
         b.allocator,
         "-j{d}",
@@ -44,19 +48,19 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     bs_run.addFileArg(tc.MAKE);
     const build_dir = bs_run.addOutputDirectoryArg("build");
 
-    bs_run.addPrefixedDirectoryArg("@CMAKE:-H", opt.source_dir);
+    bs_run.addPrefixedDirectoryArg("@CM:", opt.source_dir);
     inline for (.{
-        .{ "@CMAKE:-DCMAKE_C_COMPILER=", tc.CC },
-        .{ "@CMAKE:-DCMAKE_CXX_COMPILER=", tc.CXX },
-        .{ "@CMAKE:-DCMAKE_MAKE_PROCESSOR=", tc.MAKE },
+        .{ "@CM:-DCMAKE_C_COMPILER=", tc.CC },
+        .{ "@CM:-DCMAKE_CXX_COMPILER=", tc.CXX },
+        .{ "@CM:-DCMAKE_MAKE_PROCESSOR=", tc.MAKE },
     }) |it| {
         bs_run.addPrefixedFileArg(it[0], it[1]);
     }
     const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg(
-        "@CMAKE:-DCMAKE_INSTALL_PREFIX=",
+        "@CM:-DCMAKE_INSTALL_PREFIX=",
         "install",
     );
-    bs_run.addArg("@GMAKE:install");
+    bs_run.addArg("@GM:install");
 
     const self = b.allocator.create(CmakeStep) catch @panic("OOM");
     self.* = .{
@@ -75,10 +79,16 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     inline for (.{
         .{ "CMAKE_C_COMPILER_TARGET", target_triple },
         .{ "CMAKE_CXX_COMPILER_TARGET", target_triple },
+        .{ "CMAKE_C_COMPILER_WORKS", "1" }, // f-ing cmake writes a "-" file to the source dir without this
     }) |it| {
         addCmakeDefine(self, it[0], it[1]);
     }
     return self;
+}
+
+pub fn addCmakeDefine(self: *CmakeStep, key: []const u8, value: []const u8) void {
+    const option = std.fmt.allocPrint(self.step.owner.allocator, "@CM:-D{s}={s}", .{ key, value }) catch @panic("OOM");
+    self.run.addArg(option);
 }
 
 //generates a reusable namedWriteFile depending on generate and install
@@ -95,9 +105,4 @@ pub fn install(self: *CmakeStep, b: *std.Build, subdir: []const u8) *std.Build.S
         .source_dir = self.install_dir,
         .install_subdir = subdir,
     });
-}
-
-pub fn addCmakeDefine(self: *CmakeStep, key: []const u8, value: []const u8) void {
-    const option = std.fmt.allocPrint(self.step.owner.allocator, "@CMAKE:-D{s}={s}", .{ key, value }) catch @panic("OOM");
-    self.run.addArg(option);
 }

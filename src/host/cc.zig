@@ -57,7 +57,7 @@ pub fn subcommand(env_key: []const u8, cmd: []const []const u8) !void {
             unreachable;
         },
         .Unknown => |unknown| {
-            std.log.err("Unknown: {}\n", .{unknown});
+            std.log.err("Unknown: {d}\n", .{unknown});
             unreachable;
         },
     }

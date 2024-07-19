@@ -6,6 +6,7 @@ pub fn main() !void {
     const stderr = std.io.getStdErr();
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
+    const allocator = arena.allocator();
     var gen_args = std.ArrayList([]const u8).init(arena.allocator());
     var build_args = std.ArrayList([]const u8).init(arena.allocator());
     var p_args = std.process.args();
@@ -20,21 +21,21 @@ pub fn main() !void {
             try build_args.append(arg);
         } else if (i == 3) { // path to build dir
             const gen_dir = try std.mem.join(
-                arena.allocator(),
+                allocator,
                 "",
                 &.{ "-B", arg },
             );
             try gen_args.append(gen_dir);
             try build_args.append("-C");
             try build_args.append(arg);
-        } else if (std.mem.startsWith(u8, arg, "@CMAKE:")) {
-            try gen_args.append(arg["@CMAKE:".len..]);
-        } else if (std.mem.startsWith(u8, arg, "@GMAKE:")) {
-            try build_args.append(arg["@GMAKE:".len..]);
+        } else if (std.mem.startsWith(u8, arg, "@CM:")) {
+            try gen_args.append(arg[4..]);
+        } else if (std.mem.startsWith(u8, arg, "@GM:")) {
+            try build_args.append(arg[4..]);
         } else {
             const msg =
                 \\ unknown argument. this command "{s}" expects
-                \\ @CMAKE: or @GMAKE: prefixes on arguments: "{s}"
+                \\ @CM: or @GM: prefixes on arguments: "{s}"
                 \\
             ;
             try stderr.writer().print(msg, .{ arg0, arg });
@@ -72,21 +73,21 @@ fn callChild(args: []const []const u8, arena: std.mem.Allocator) !void {
         },
         .Signal => |sig| {
             try stderr.writer().print(
-                "Signal Received: {}\n",
+                "Signal Received: {d}\n",
                 .{sig},
             );
             unreachable;
         },
         .Stopped => |stop| {
             try stderr.writer().print(
-                "Stopped: {}\n",
+                "Stopped: {d}\n",
                 .{stop},
             );
             unreachable;
         },
         .Unknown => |unknown| {
             try stderr.writer().print(
-                "Unknown: {}\n",
+                "Unknown: {d}\n",
                 .{unknown},
             );
             unreachable;
