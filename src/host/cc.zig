@@ -38,9 +38,6 @@ pub fn subcommand(env_key: []const u8, cmd: []const []const u8) !void {
             try args.append(arg);
         }
     }
-    for (args.items) |it| {
-        std.debug.print("{s} ", .{it});
-    }
     var proc = std.process.Child.init(
         args.items,
         arena.allocator(),
@@ -49,19 +46,18 @@ pub fn subcommand(env_key: []const u8, cmd: []const []const u8) !void {
     proc.stdin_behavior = .Inherit;
     proc.stdout_behavior = .Inherit;
     try proc.spawn();
-    const res = try proc.wait();
-    switch (res) {
-        .Exited => std.process.exit(res.Exited),
-        .Signal => {
-            std.log.debug("Signal Received: {}\n", .{res.Signal});
+    switch (try proc.wait()) {
+        .Exited => |exit| std.process.exit(exit),
+        .Signal => |sig| {
+            std.log.err("Signal Received: {d}\n", .{sig});
             unreachable;
         },
-        .Stopped => {
-            std.log.debug("Stopped: {}\n", .{res.Stopped});
+        .Stopped => |stop |{
+            std.log.err("Stopped: {d}\n", .{stop});
             unreachable;
         },
-        .Unknown => {
-            std.log.debug("Unknown: {}\n", .{res.Unknown});
+        .Unknown => |unknown| {
+            std.log.err("Unknown: {}\n", .{unknown});
             unreachable;
         },
     }
