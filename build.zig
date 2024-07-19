@@ -10,7 +10,11 @@ const builtin = @import("builtin");
 pub fn build(b: *std.Build) void {
     const defaults: DefaultBuildOptions = .{
         .target = b.standardTargetOptions(.{}),
-        .optimize = b.standardOptimizeOption(.{}),
+        .optimize = b.option(
+            std.builtin.OptimizeMode,
+            "optimize",
+            "Prioritize performance, safety, or binary size",
+        ) orelse .ReleaseFast,
     };
 
     if (b.option(
@@ -78,12 +82,14 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
         const cmake_tc = cmake.Toolchain.zigBuildDefaults(b);
         cmake_tc.CMAKE = dep.artifact("cmake").getEmittedBin();
 
-        // if (b.lazyDependency("gnumake", .{
-        //     .target = cmake_options.target,
-        //     .optimize = cmake_options.optimize,
-        // })) |gnumake| {
-        //     cmake_tc.MAKE = gnumake.artifact("make").getEmittedBin();
-        // }
+        if (b.lazyDependency("gnumake", .{
+            .target = cmake_options.target,
+            .optimize = cmake_options.optimize,
+        })) |gnumake| {
+            const gnumake_exe = gnumake.artifact("make");
+            b.step("gnumake", "").dependOn(&b.addInstallArtifact(gnumake_exe, .{}).step);
+            cmake_tc.MAKE = gnumake_exe.getEmittedBin();
+        }
 
         const cmake_step = cmake.stage2(
             dep.builder,
