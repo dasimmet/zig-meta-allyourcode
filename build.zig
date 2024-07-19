@@ -20,20 +20,32 @@ pub fn build(b: *std.Build) void {
     };
 
     if (b.option(
-        []const u8,
+        DependencyBuild,
         "dependency",
         "use this option to fetch a single named transitive dependency",
     )) |d| {
-        _ = b.lazyDependency(d, .{});
+        inline for (DependencyBuild.mapping) |dep_build| {
+            if (dep_build[0] == d) dep_build[1](b, defaults);
+        }
     } else {
-        addCmakeBuild(b, defaults);
-        addLibGitBuild(b, defaults);
+        inline for (DependencyBuild.mapping) |dep_build| {
+            dep_build[1](b, defaults);
+        }
     }
     const clean = b.addRemoveDirTree(.{ .cwd_relative = b.cache_root.path.? });
     b.step("clean", "clean").dependOn(&clean.step);
-    const clean_glob = b.addRemoveDirTree(.{ .cwd_relative = b.graph.global_cache_root.path.? });
-    b.step("clean-glob", "clean").dependOn(&clean_glob.step);
 }
+
+pub const DependencyBuild = enum {
+    cmake,
+    libgit2,
+    gnumake,
+
+    pub const mapping = .{
+        .{ DependencyBuild.cmake, addCmakeBuild },
+        .{ DependencyBuild.libgit2, addLibGitBuild },
+    };
+};
 
 pub fn addLibGitBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
     if (b.lazyDependency("libgit2", defaults)) |dep| {
@@ -67,10 +79,13 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
         const cm_step = b.step("cmake-bs", "build the cmake stage1 exe");
         inline for (.{ "cmake", "uv" }) |f| {
             const cm_art = dep.artifact(f);
-            const cm_name = if (cm_art.kind == .lib)
-                "cmake_bootstrap_" ++ f ++ ".so"
+            const t: std.Build.ResolvedTarget = cmake_options.target;
+            const cm_name = if (cm_art.kind == .lib and cm_art.linkage == .dynamic)
+                "cmake_bootstrap_" ++ f ++ t.result.dynamicLibSuffix()
+            else if (cm_art.kind == .lib)
+                "cmake_bootstrap_" ++ f ++ t.result.staticLibSuffix()
             else
-                "cmake_bootstrap_" ++ f;
+                "cmake_bootstrap_" ++ f ++ t.result.exeFileExt();
 
             const cm_install = b.addInstallArtifact(cm_art, .{
                 .dest_sub_path = cm_name,
@@ -103,6 +118,21 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
         cmake2_install.step.dependOn(&cmake_step.step);
         b.getInstallStep().dependOn(&cmake2_install.step);
         b.step("cmake", "run cmake bootstrap stage2 and install").dependOn(&cmake2_install.step);
+    }
+}
+
+pub fn addGnuMakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
+    if (b.lazyDependency("gnumake", .{
+        .target = defaults.target,
+        .optimize = defaults.optimize,
+    })) |gnumake| {
+        const gnumake_exe = gnumake.artifact("make");
+        const gm_install = b.addInstallArtifact(
+            gnumake_exe,
+            .{},
+        );
+        b.getInstallStep().dependOn(&gm_install.step);
+        b.step("gnumake", "install gnumake ").dependOn(&gm_install.step);
     }
 }
 
