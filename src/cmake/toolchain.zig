@@ -2,10 +2,11 @@ const std = @import("std");
 const LazyPath = std.Build.LazyPath;
 const Toolchain = @This();
 
-CC: LazyPath = .{ .cwd_relative = "cc" },
-CXX: LazyPath = .{ .cwd_relative = "c++" },
+CC: LazyPath,
+CXX: LazyPath,
 CMAKE: LazyPath = .{ .cwd_relative = "cmake" },
 MAKE: LazyPath = .{ .cwd_relative = "make" },
+CMAKE_WRAPPER: LazyPath,
 ZIG: []const u8 = "zig",
 
 pub fn zigBuildDefaults(b: *std.Build, optimize: ?std.builtin.OptimizeMode) *Toolchain {
@@ -21,12 +22,19 @@ pub fn zigBuildDefaults(b: *std.Build, optimize: ?std.builtin.OptimizeMode) *Too
         .target = b.graph.host,
         .optimize = optimize orelse .Debug,
     });
+    const cmake_wrapper = b.addExecutable(.{
+        .name = "cmake_make_wrapper",
+        .root_source_file = b.path("src/host/cmake_make_wrapper.zig"),
+        .target = b.graph.host,
+        .optimize = optimize orelse .ReleaseFast,
+    });
 
     const self = b.allocator.create(Toolchain) catch @panic("OOM");
     self.* = .{
         .CC = zig_cc.getEmittedBin(),
         .CXX = zig_cxx.getEmittedBin(),
         .ZIG = b.graph.zig_exe,
+        .CMAKE_WRAPPER = cmake_wrapper.getEmittedBin(),
     };
     return self;
 }

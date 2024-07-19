@@ -9,5 +9,9 @@
         .meta_allyourcode = .{
             .path = "..",
         },
+        .sqlite3_cmake = .{
+            .url = "https://github.com/alex85k/sqlite3-cmake/archive/refs/heads/master.tar.gz",
+            .hash = "122074cbb152f9a80b886471e8b7d7c76b1b440d3f9035e12d694de5639de8434626",
+        },
     },
 }

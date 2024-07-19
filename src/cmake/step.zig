@@ -11,16 +11,17 @@ install_dir: LazyPath,
 run: *Step.Run,
 toolchain: *Toolchain,
 
-const Options = struct {
-    target: std.Build.ResolvedTarget,
+pub const Options = struct {
+    target: ?std.Build.ResolvedTarget,
     name: []const u8,
     source_dir: LazyPath,
-    toolchain: *Toolchain,
+    toolchain: ?*Toolchain = null,
 };
 
 pub fn init(b: *std.Build, opt: Options) *CmakeStep {
-    const target_triple = opt.target.result.zigTriple(b.allocator) catch @panic("OOM");
-    const tc = opt.toolchain;
+    const target = opt.target orelse b.graph.host;
+    const target_triple = target.result.zigTriple(b.allocator) catch @panic("OOM");
+    const tc = opt.toolchain.?;
 
     const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
     const makeflags = std.fmt.allocPrint(
@@ -33,13 +34,8 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     // and pass arguments for both to it
     // otherwise we cannot work with the zig cache, as cmake wants to know the output
     // directory of gmake
-    const cm_runner = b.addExecutable(.{
-        .name = "cmake_wrapper",
-        .root_source_file = .{ .cwd_relative = "src/host/cmake_make_wrapper.zig" },
-        .target = b.graph.host,
-        .optimize = .Debug,
-    });
-    const bs_run = b.addRunArtifact(cm_runner);
+    const bs_run = std.Build.Step.Run.create(b, "cmake");
+    bs_run.addFileArg(tc.CMAKE_WRAPPER);
     bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
     bs_run.setEnvironmentVariable("MAKEFLAGS", makeflags);
     if (b.verbose) bs_run.stdio = .inherit;
@@ -68,7 +64,7 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
         .build_dir = build_dir,
         .install_dir = cmake_output_dir,
         .run = bs_run,
-        .toolchain = opt.toolchain,
+        .toolchain = opt.toolchain.?,
         .step = Step.init(.{
             .id = .custom,
             .name = opt.name,
@@ -86,8 +82,8 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
 }
 
 //generates a reusable namedWriteFile depending on generate and install
-pub fn getInstallDir(self: *CmakeStep) *std.Build.Step.WriteFile {
-    const wf = self.step.owner.addNamedWriteFiles(self.step.name);
+pub fn installDir(self: *CmakeStep, b: *std.Build) *std.Build.Step.WriteFile {
+    const wf = b.addNamedWriteFiles(self.step.name);
     _ = wf.addCopyDirectory(self.install_dir, "", .{});
     wf.step.dependOn(&self.step);
     return wf;

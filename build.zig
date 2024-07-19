@@ -117,7 +117,7 @@ fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             dep.builder,
             cmake_tc,
         );
-        _ = cmake_step.getInstallDir();
+        _ = cmake_step.installDir(b);
         const cmake2_install = b.addInstallDirectory(.{
             .source_dir = cmake_step.install_dir,
             .install_dir = .{ .custom = "cmake" },
@@ -169,11 +169,26 @@ pub const DefaultBuildOptions = struct {
     optimize: std.builtin.OptimizeMode,
 };
 
-pub const lazy = struct {
-    pub fn dependency(b: *std.Build, name: []const u8, args: anytype) ?*std.Build.Dependency {
-        const this_dep = b.dependencyFromBuildZig(meta_allyourcode, .{
-            .dependency = name,
+pub fn addCMakeStep(b: *std.Build, opt: cmake.CMakeStep.Options) *cmake.CMakeStep {
+    const this_dep = b.dependencyFromBuildZig(meta_allyourcode, .{
+        .dependency = .cmake,
+    });
+    if (opt.toolchain == null) {
+        const tc = cmake.Toolchain.zigBuildDefaults(this_dep.builder, null);
+        tc.CMAKE = this_dep.namedWriteFiles("cmake").getDirectory().path(this_dep.builder, "bin/cmake");
+        if (this_dep.builder.lazyDependency("gnumake", .{
+            .target = b.graph.host,
+        })) |gnumake| {
+            const gnumake_exe = gnumake.artifact("make");
+            tc.MAKE = gnumake_exe.getEmittedBin();
+        }
+        return cmake.CMakeStep.init(b, .{
+            .name = opt.name,
+            .source_dir = opt.source_dir,
+            .target = opt.target,
+            .toolchain = tc,
         });
-        return this_dep.builder.lazyDependency(name, args);
     }
-};
+
+    return cmake.CMakeStep.init(b, opt);
+}
