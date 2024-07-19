@@ -6,6 +6,8 @@
 const meta_allyourcode = @This();
 const std = @import("std");
 const builtin = @import("builtin");
+pub const cmake = @import("src/cmake.zig");
+pub const libgit2 = @import("src/libgit2.zig");
 
 pub fn build(b: *std.Build) void {
     const defaults: DefaultBuildOptions = .{
@@ -34,7 +36,6 @@ pub fn build(b: *std.Build) void {
 }
 
 pub fn addLibGitBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
-    const libgit2 = @import("src/libgit2.zig");
     if (b.lazyDependency("libgit2", defaults)) |dep| {
         libgit2.build(dep.builder);
         const git2_step = b.step("git2", "build the git2 exe");
@@ -50,7 +51,6 @@ pub fn addLibGitBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
 }
 
 pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
-    const cmake = @import("src/cmake.zig");
     const CMakeOptionsType: type = mergeStructFields(DefaultBuildOptions, cmake.ConfigHeaders.Options);
     var cmake_options: CMakeOptionsType = .{
         .target = defaults.target,
