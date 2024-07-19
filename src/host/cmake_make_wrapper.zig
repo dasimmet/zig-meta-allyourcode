@@ -43,7 +43,6 @@ pub fn main() !void {
 
 fn callChild(args: []const []const u8, arena: std.mem.Allocator) !void {
     const stderr = std.io.getStdErr();
-    const stdout = std.io.getStdOut();
     var proc = std.process.Child.init(
         args,
         arena,
@@ -53,13 +52,45 @@ fn callChild(args: []const []const u8, arena: std.mem.Allocator) !void {
     proc.stdout_behavior = .Pipe;
     try proc.spawn();
 
+    try forward_stdio_pipes(&proc);
+
+    switch (try proc.wait()) {
+        .Exited => |ex| {
+            if (ex != 0) std.process.exit(ex);
+        },
+        .Signal => |sig| {
+            try stderr.writer().print(
+                "Signal Received: {}\n",
+                .{sig},
+            );
+            unreachable;
+        },
+        .Stopped => |stop| {
+            try stderr.writer().print(
+                "Stopped: {}\n",
+                .{stop},
+            );
+            unreachable;
+        },
+        .Unknown => |unknown| {
+            try stderr.writer().print(
+                "Unknown: {}\n",
+                .{unknown},
+            );
+            unreachable;
+        },
+    }
+}
+
+fn forward_stdio_pipes(proc: *std.process.Child) !void {
+    const stderr = std.io.getStdErr();
+    const stdout = std.io.getStdOut();
+
     var poller = std.io.poll(proc.allocator, enum { stdout, stderr }, .{
         .stdout = proc.stdout.?,
         .stderr = proc.stderr.?,
     });
     defer poller.deinit();
-    // var buf: [128]u8 = undefined;
-
     const stdout_f = poller.fifo(.stdout);
     const stderr_f = poller.fifo(.stderr);
     while (try poller.poll()) {
@@ -68,36 +99,9 @@ fn callChild(args: []const []const u8, arena: std.mem.Allocator) !void {
             stdout_f.discard(count);
         }
         while (stderr_f.count > 0) {
-            const count = try stdout.write(stderr_f.buf[stderr_f.head..stderr_f.count]);
+            const count = try stderr.write(stderr_f.buf[stderr_f.head..stderr_f.count]);
             stderr_f.discard(count);
         }
-    }
-
-    switch (try proc.wait()) {
-        .Exited => |ex| {
-            if (ex != 0) std.process.exit(res.Exited);
-        },
-        .Signal => {
-            try stderr.writer().print(
-                "Signal Received: {}\n",
-                .{res.Signal},
-            );
-            unreachable;
-        },
-        .Stopped => {
-            try stderr.writer().print(
-                "Stopped: {}\n",
-                .{res.Stopped},
-            );
-            unreachable;
-        },
-        .Unknown => {
-            try stderr.writer().print(
-                "Unknown: {}\n",
-                .{res.Unknown},
-            );
-            unreachable;
-        },
     }
 }
 
