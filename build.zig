@@ -119,7 +119,7 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
             dep.builder,
             cmake_tc,
         );
-        _ = cmake_step.installDir(b, "cmake");
+        _ = cmake_step.installNamedWriteFile(b, "cmake");
         const cmake2_install = b.addInstallDirectory(.{
             .source_dir = cmake_step.install_dir,
             .install_dir = .{ .custom = "cmake" },

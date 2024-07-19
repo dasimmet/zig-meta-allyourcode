@@ -82,11 +82,19 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
 }
 
 //generates a reusable namedWriteFile depending on generate and install
-pub fn installDir(self: *CmakeStep, b: *std.Build, name: []const u8) *std.Build.Step.WriteFile {
+pub fn installNamedWriteFile(self: *CmakeStep, b: *std.Build, name: []const u8) *std.Build.Step.WriteFile {
     const wf = b.addNamedWriteFiles(name);
     _ = wf.addCopyDirectory(self.install_dir, "", .{});
     wf.step.dependOn(&self.step);
     return wf;
+}
+
+pub fn install(self: *CmakeStep, b: *std.Build, subdir: []const u8) *std.Build.Step.InstallDir {
+    return b.addInstallDirectory(.{
+        .install_dir = .{ .custom = "" },
+        .source_dir = self.install_dir,
+        .install_subdir = subdir,
+    });
 }
 
 pub fn addCmakeDefine(self: *CmakeStep, key: []const u8, value: []const u8) void {

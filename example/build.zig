@@ -7,19 +7,15 @@ const meta_allyourcode = @import("meta_allyourcode");
 
 const std = @import("std");
 pub fn build(b: *std.Build) void {
-    // const target = b.standardTargetOptions(.{});
+    const target = b.standardTargetOptions(.{});
     // const optimize = b.standardOptimizeOption(.{});
     if (b.lazyDependency("sqlite3_cmake", .{})) |sqlite3_dep| {
         const cmakeStep = meta_allyourcode.addCMakeStep(b, .{
-            .target = b.graph.host,
+            .target = target,
             .name = "cmake",
             .source_dir = sqlite3_dep.path(""),
         });
-        const sqlite3_install = b.addInstallDirectory(.{
-            .install_dir = .{ .custom = "" },
-            .source_dir = cmakeStep.install_dir,
-            .install_subdir = "",
-        });
+        const sqlite3_install = cmakeStep.install(b, "");
         b.getInstallStep().dependOn(&sqlite3_install.step);
     }
 }
