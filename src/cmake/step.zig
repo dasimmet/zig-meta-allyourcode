@@ -6,7 +6,7 @@ pub const Toolchain = @import("toolchain.zig");
 
 step: Step,
 source_dir: LazyPath,
-generate_dir: []const u8,
+generate_dir: LazyPath,
 install_dir: LazyPath,
 generate: *Step.Run,
 compile: *Step.Run,
@@ -25,9 +25,8 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const bs_run = std.Build.Step.Run.create(b, "cmake_generate");
     bs_run.addFileArg(tc.CMAKE);
 
-    const stage2_path = b.makeTempPath();
-    bs_run.setCwd(.{ .cwd_relative = stage2_path });
-    bs_run.addDirectoryArg(opt.source_dir);
+    const stage2_path = bs_run.addPrefixedOutputDirectoryArg("-B", "cmake_generate");
+    bs_run.addPrefixedDirectoryArg("-H", opt.source_dir);
     inline for (.{
         .{ "-DCMAKE_C_COMPILER=", tc.CC },
         .{ "-DCMAKE_CXX_COMPILER=", tc.CXX },
@@ -36,21 +35,20 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
         bs_run.addPrefixedFileArg(it[0], it[1]);
     }
     bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
-    bs_run.has_side_effects = true;
     const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
-
-    const cmake_compile = Step.Run.create(b, "cmake_build");
-    cmake_compile.addFileArg(opt.toolchain.MAKE);
-
-    cmake_compile.step.dependOn(&bs_run.step);
-    cmake_compile.setEnvironmentVariable("ZIG", opt.toolchain.ZIG);
-    cmake_compile.setCwd(.{ .cwd_relative = stage2_path });
 
     const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
     const make_parallel = std.fmt.allocPrint(b.allocator, "-j{d}", .{cpu_count}) catch @panic("OOM");
-    cmake_compile.addArg(make_parallel);
 
+    const cmake_compile = Step.Run.create(b, "cmake_build");
+    cmake_compile.addFileArg(opt.toolchain.MAKE);
+    cmake_compile.addArg("-C");
+    cmake_compile.addDirectoryArg(stage2_path);
+    cmake_compile.addArg(make_parallel);
     cmake_compile.addArg("install");
+
+    cmake_compile.step.dependOn(&bs_run.step);
+    cmake_compile.setEnvironmentVariable("ZIG", opt.toolchain.ZIG);
 
     const self = b.allocator.create(CmakeStep) catch @panic("OOM");
     self.* = .{
@@ -70,7 +68,7 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     self.step.dependOn(&cmake_compile.step);
     inline for (.{
         .{ "CMAKE_C_COMPILER_TARGET", target_triple },
-        .{ "CMAKE_CXX_COMPILER_TARGET", target_triple},
+        .{ "CMAKE_CXX_COMPILER_TARGET", target_triple },
     }) |it| {
         addCmakeDefine(self, it[0], it[1]);
     }
@@ -85,5 +83,5 @@ pub fn addCmakeDefine(self: *CmakeStep, key: []const u8, value: []const u8) void
 fn make(step: *Step, opt: std.Build.Step.MakeOptions) anyerror!void {
     const self: *CmakeStep = @fieldParentPtr("step", step);
     _ = opt;
-    try std.fs.deleteTreeAbsolute(self.generate_dir);
+    try std.fs.deleteTreeAbsolute(self.generate_dir.getPath(step.owner));
 }
