@@ -42,10 +42,12 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
 
     const cmake_compile = Step.Run.create(b, "cmake_build");
     cmake_compile.addFileArg(opt.toolchain.MAKE);
+    cmake_compile.addPrefixedFileArg("CC=",opt.toolchain.CC);
+    cmake_compile.addPrefixedFileArg("CXX=",opt.toolchain.CXX);
     cmake_compile.addArg("-C");
     cmake_compile.addDirectoryArg(stage2_path);
-    cmake_compile.addArg(make_parallel);
     cmake_compile.addArg("install");
+    cmake_compile.addArg(make_parallel);
 
     cmake_compile.step.dependOn(&bs_run.step);
     cmake_compile.setEnvironmentVariable("ZIG", opt.toolchain.ZIG);

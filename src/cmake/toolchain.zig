@@ -9,22 +9,24 @@ MAKE: LazyPath = .{ .cwd_relative = "make" },
 ZIG: []const u8 = "zig",
 
 pub fn zigBuildDefaults(b: *std.Build, optimize: ?std.builtin.OptimizeMode) *Toolchain {
-    const self = b.allocator.create(Toolchain) catch @panic("OOM");
-    self.* = .{};
-    self.ZIG = b.graph.zig_exe;
     const zig_cc = b.addExecutable(.{
         .name = "cc",
         .root_source_file = b.path("src/host/cc.zig"),
         .target = b.graph.host,
         .optimize = optimize orelse .Debug,
     });
-    self.CC = zig_cc.getEmittedBin();
     const zig_cxx = b.addExecutable(.{
         .name = "cxx",
         .root_source_file = b.path("src/host/cxx.zig"),
         .target = b.graph.host,
         .optimize = optimize orelse .Debug,
     });
-    self.CXX = zig_cxx.getEmittedBin();
+
+    const self = b.allocator.create(Toolchain) catch @panic("OOM");
+    self.* = .{
+        .CC = zig_cc.getEmittedBin(),
+        .CXX = zig_cxx.getEmittedBin(),
+        .ZIG = b.graph.zig_exe,
+    };
     return self;
 }
