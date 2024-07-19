@@ -84,6 +84,6 @@ pub fn addCmakeDefine(self: *CmakeStep, key: []const u8, value: []const u8) void
 
 fn make(step: *Step, opt: std.Build.Step.MakeOptions) anyerror!void {
     const self: *CmakeStep = @fieldParentPtr("step", step);
+    _ = self;
     _ = opt;
-    try std.fs.deleteTreeAbsolute(self.generate_dir.getPath(step.owner));
 }
