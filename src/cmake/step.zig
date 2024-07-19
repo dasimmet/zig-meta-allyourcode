@@ -22,9 +22,13 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const target_triple = opt.target.result.zigTriple(b.allocator) catch @panic("OOM");
     const tc = opt.toolchain;
 
+    // we compile a simple tool to run both cmake and build step after one another,
+    // and pass arguments for both to it
+    // otherwise we cannot work with the zig cache, as cmake wants to know the output
+    // directory of gmake
     const cm_runner = b.addExecutable(.{
         .name = "cmake_wrapper",
-        .root_source_file = .{ .cwd_relative = "src/host/cmake_wrapper.zig" },
+        .root_source_file = .{ .cwd_relative = "src/host/cmake_make_wrapper.zig" },
         .target = b.graph.host,
         .optimize = .Debug,
     });
@@ -51,7 +55,7 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
     const make_parallel = std.fmt.allocPrint(b.allocator, "@GMAKE:-j{d}", .{cpu_count}) catch @panic("OOM");
 
-    bs_run.addPrefixedFileArg("@GMAKE:",opt.toolchain.MAKE);
+    bs_run.addPrefixedFileArg("@GMAKE:", opt.toolchain.MAKE);
     bs_run.addPrefixedFileArg("@GMAKE:CC=", opt.toolchain.CC);
     bs_run.addPrefixedFileArg("@GMAKE:CXX=", opt.toolchain.CXX);
     bs_run.addArg("@GMAKE:install");

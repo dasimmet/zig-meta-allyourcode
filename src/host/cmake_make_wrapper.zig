@@ -73,8 +73,7 @@ fn callChild(args: []const []const u8, arena: std.mem.Allocator) !void {
         }
     }
 
-    const res = try proc.wait();
-    switch (res) {
+    switch (try proc.wait()) {
         .Exited => |ex| {
             if (ex != 0) std.process.exit(res.Exited);
         },
