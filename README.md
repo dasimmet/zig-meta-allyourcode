@@ -14,7 +14,7 @@ and it will run the build as if committed to the cmake repository.
 - cmake (including custom build step?)
   - ✅ stage1
   - ✅ running bootstrap `cmake` to reconfigure itself with `CC=zig cc`
-  - ✅ use system `make` to rebuild `cmake`
+  - ✅ use zig built `make` to rebuild `cmake`
   - try to link cmake fully static
 - libgit2 ✅
   - build for wasm32-wasi
