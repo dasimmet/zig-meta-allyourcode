@@ -32,8 +32,19 @@ pub fn build(b: *std.Build) void {
             dep_build[1](b, defaults);
         }
     }
-    const clean = b.addRemoveDirTree(.{ .cwd_relative = b.cache_root.path.? });
+    const clean = b.addRemoveDirTree(.{
+        .cwd_relative = b.cache_root.path.?,
+    });
     b.step("clean", "clean").dependOn(&clean.step);
+
+    const example = std.Build.Step.Run.create(b, "example");
+    example.setCwd(b.path("example"));
+    example.addArg(b.graph.zig_exe);
+    example.addArg("build");
+    b.step(
+        "example",
+        "build an example depending on this build",
+    ).dependOn(&example.step);
 }
 
 pub const DependencyBuild = enum {
