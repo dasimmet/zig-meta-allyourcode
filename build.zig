@@ -79,7 +79,7 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             cm_step.dependOn(&cm_install.step);
         }
 
-        const cmake_tc = cmake.Toolchain.zigBuildDefaults(b);
+        const cmake_tc = cmake.Toolchain.zigBuildDefaults(b, cmake_options.optimize);
         cmake_tc.CMAKE = dep.artifact("cmake").getEmittedBin();
 
         if (b.lazyDependency("gnumake", .{

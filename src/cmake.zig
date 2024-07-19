@@ -66,7 +66,7 @@ pub fn build(b: *std.Build) void {
         .generated_headers = generated_headers,
     });
     cmake_bootstrap.linkLibrary(lexer);
-    const cmake_tc = Toolchain.zigBuildDefaults(b);
+    const cmake_tc = Toolchain.zigBuildDefaults(b, optimize);
     cmake_tc.CMAKE = cmake_bootstrap.getEmittedBin();
     const cmake_stage2_step = stage2(b, cmake_tc);
     b.step("run-bs", "run bs").dependOn(&cmake_stage2_step.step);
@@ -74,7 +74,7 @@ pub fn build(b: *std.Build) void {
 
 pub fn stage2(b: *std.Build, tc: *Toolchain) *CMakeStep {
     const cmakeStep = CMakeStep.init(b, .{
-        .target = b.resolveTargetQuery(.{}),
+        .target = b.graph.host,
         .toolchain = tc,
         .name = "cmake_stage2",
         .source_dir = b.path(""),
@@ -83,13 +83,14 @@ pub fn stage2(b: *std.Build, tc: *Toolchain) *CMakeStep {
     inline for (.{
         .{ "BUILD_CMAKE_FROM_SOURCE", "1" },
         .{ "CMAKE_BIN_DIR", "" },
-        .{ "CMAKE_BOOTSTRAP", "1" },
+        // .{ "CMAKE_BOOTSTRAP", "1" },
         .{ "CMAKE_DATA_DIR", "" },
         .{ "CMAKE_DOC_DIR", "" },
         .{ "CMAKE_MAN_DIR", "" },
+        .{ "CMAKE_SIZEOF_VOID_P", "8" },
+        .{ "CMAKE_USE_OPENSSL", "0" },
         .{ "CMAKE_USE_SYSTEM_LIBRARIES", "0" },
         .{ "CMAKE_XDGDATA_DIR", "" },
-        .{ "CMAKE_SIZEOF_VOID_P", "8" },
     }) |arg| {
         cmakeStep.addCmakeDefine(arg[0], arg[1]);
     }

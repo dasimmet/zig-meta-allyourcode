@@ -39,13 +39,17 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
 
     const cmake_compile = Step.Run.create(b, "cmake_build");
+    cmake_compile.addFileArg(opt.toolchain.MAKE);
+
     cmake_compile.step.dependOn(&bs_run.step);
     cmake_compile.setEnvironmentVariable("ZIG", opt.toolchain.ZIG);
-    const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
-    const makeflags = std.fmt.allocPrint(b.allocator, "-j{d}", .{cpu_count}) catch @panic("OOM");
     cmake_compile.setCwd(.{ .cwd_relative = stage2_path });
-    cmake_compile.setEnvironmentVariable("MAKEFLAGS", makeflags);
-    cmake_compile.addFileArg(opt.toolchain.MAKE);
+
+    const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
+    const make_parallel = std.fmt.allocPrint(b.allocator, "-j{d}", .{cpu_count}) catch @panic("OOM");
+    cmake_compile.addArg(make_parallel);
+    // cmake_compile.setEnvironmentVariable("MAKEFLAGS", makeflags);
+
     cmake_compile.addArg("install");
 
     const self = b.allocator.create(CmakeStep) catch @panic("OOM");

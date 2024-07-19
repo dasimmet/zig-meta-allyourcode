@@ -8,7 +8,7 @@ CMAKE: LazyPath = .{ .cwd_relative = "cmake" },
 MAKE: LazyPath = .{ .cwd_relative = "make" },
 ZIG: []const u8 = "zig",
 
-pub fn zigBuildDefaults(b: *std.Build) *Toolchain {
+pub fn zigBuildDefaults(b: *std.Build, optimize: ?std.builtin.OptimizeMode) *Toolchain {
     const self = b.allocator.create(Toolchain) catch @panic("OOM");
     self.* = .{};
     self.ZIG = b.graph.zig_exe;
@@ -16,14 +16,14 @@ pub fn zigBuildDefaults(b: *std.Build) *Toolchain {
         .name = "cc",
         .root_source_file = b.path("src/host/cc.zig"),
         .target = b.graph.host,
-        .optimize = .Debug,
+        .optimize = optimize orelse .Debug,
     });
     self.CC = zig_cc.getEmittedBin();
     const zig_cxx = b.addExecutable(.{
         .name = "cxx",
         .root_source_file = b.path("src/host/cxx.zig"),
         .target = b.graph.host,
-        .optimize = .Debug,
+        .optimize = optimize orelse .Debug,
     });
     self.CXX = zig_cxx.getEmittedBin();
     return self;
