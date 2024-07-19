@@ -64,7 +64,6 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
             .id = .custom,
             .name = opt.name,
             .owner = b,
-            .makeFn = make,
         }),
     };
     self.step.dependOn(&cmake_compile.step);
@@ -77,13 +76,15 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     return self;
 }
 
+//generates a reusable namedWriteFile depending on generate and install
+pub fn getInstallDir(self: *CmakeStep) *std.Build.Step.WriteFile {
+    const wf = self.step.owner.addNamedWriteFiles(self.step.name);
+    _ = wf.addCopyDirectory(self.install_dir, "", .{});
+    wf.step.dependOn(&self.step);
+    return wf;
+}
+
 pub fn addCmakeDefine(self: *CmakeStep, key: []const u8, value: []const u8) void {
     const option = std.fmt.allocPrint(self.step.owner.allocator, "-D{s}={s}", .{ key, value }) catch @panic("OOM");
     self.generate.addArg(option);
-}
-
-fn make(step: *Step, opt: std.Build.Step.MakeOptions) anyerror!void {
-    const self: *CmakeStep = @fieldParentPtr("step", step);
-    _ = self;
-    _ = opt;
 }

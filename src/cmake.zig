@@ -76,7 +76,7 @@ pub fn stage2(b: *std.Build, tc: *Toolchain) *CMakeStep {
     const cmakeStep = CMakeStep.init(b, .{
         .target = b.graph.host,
         .toolchain = tc,
-        .name = "cmake_stage2",
+        .name = "cmake",
         .source_dir = b.path(""),
     });
 
