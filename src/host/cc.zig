@@ -53,15 +53,15 @@ pub fn subcommand(env_key: []const u8, cmd: []const []const u8) !void {
     switch (res) {
         .Exited => std.process.exit(res.Exited),
         .Signal => {
-            std.debug.print("Signal Received: {}\n", .{res.Signal});
+            std.log.debug("Signal Received: {}\n", .{res.Signal});
             unreachable;
         },
         .Stopped => {
-            std.debug.print("Stopped: {}\n", .{res.Stopped});
+            std.log.debug("Stopped: {}\n", .{res.Stopped});
             unreachable;
         },
         .Unknown => {
-            std.debug.print("Unknown: {}\n", .{res.Stopped});
+            std.log.debug("Unknown: {}\n", .{res.Unknown});
             unreachable;
         },
     }
