@@ -75,8 +75,7 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             cm_step.dependOn(&cm_install.step);
         }
 
-        var cmake_tc = cmake.Toolchain{};
-        cmake_tc.zigBuildDefaults(b);
+        const cmake_tc = cmake.Toolchain.zigBuildDefaults(b);
         cmake_tc.CMAKE = dep.artifact("cmake").getEmittedBin();
 
         // if (b.lazyDependency("gnumake", .{
@@ -100,6 +99,7 @@ pub fn addCmakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
     }
 }
 
+// will generate a struct type with the fields of ta and tb
 pub fn mergeStructFields(ta: type, tb: type) type {
     const typeinfo_a = @typeInfo(ta);
     const typeinfo_b = @typeInfo(tb);

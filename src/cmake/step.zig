@@ -10,20 +10,21 @@ generate_dir: []const u8,
 install_dir: LazyPath,
 generate: *Step.Run,
 compile: *Step.Run,
-toolchain: Toolchain,
+toolchain: *Toolchain,
 
 const Options = struct {
     target: std.Build.ResolvedTarget,
     name: []const u8,
     source_dir: LazyPath,
-    toolchain: Toolchain = .{},
+    toolchain: *Toolchain,
 };
 
 pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const target_triple = opt.target.result.zigTriple(b.allocator) catch @panic("OOM");
     const tc = opt.toolchain;
-    const bs_run = std.Build.Step.Run.create(b, "cmake_stage2");
+    const bs_run = std.Build.Step.Run.create(b, "cmake_generate");
     bs_run.addFileArg(tc.CMAKE);
+
     const stage2_path = b.makeTempPath();
     bs_run.setCwd(.{ .cwd_relative = stage2_path });
     bs_run.addDirectoryArg(opt.source_dir);
@@ -31,15 +32,13 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
         .{ "-DCMAKE_C_COMPILER=", tc.CC },
         .{ "-DCMAKE_CXX_COMPILER=", tc.CXX },
         .{ "-DCMAKE_MAKE_PROCESSOR=", tc.MAKE },
-        .{ "-DCMAKE_C_COMPILER_TARGET=", .{ .cwd_relative = target_triple } },
-        .{ "-DCMAKE_CXX_COMPILER_TARGET=", .{ .cwd_relative = target_triple } },
     }) |it| {
         bs_run.addPrefixedFileArg(it[0], it[1]);
     }
     bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
     const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg("-DCMAKE_INSTALL_PREFIX=", "cmake_install");
 
-    const cmake_compile = Step.Run.create(b, "cmake_compile");
+    const cmake_compile = Step.Run.create(b, "cmake_build");
     cmake_compile.step.dependOn(&bs_run.step);
     cmake_compile.setEnvironmentVariable("ZIG", opt.toolchain.ZIG);
     const cpu_count = std.Thread.getCpuCount() catch @panic("Could not get CPU Count");
@@ -65,12 +64,17 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
         }),
     };
     self.step.dependOn(&cmake_compile.step);
+    inline for (.{
+        .{ "CMAKE_C_COMPILER_TARGET", target_triple },
+        .{ "CMAKE_CXX_COMPILER_TARGET", target_triple},
+    }) |it| {
+        addCmakeDefine(self, it[0], it[1]);
+    }
     return self;
 }
 
 pub fn addCmakeDefine(self: *CmakeStep, key: []const u8, value: []const u8) void {
-    const b = self.step.owner;
-    const option = std.fmt.allocPrint(b.allocator, "-D{s}={s}", .{ key, value }) catch @panic("OOM");
+    const option = std.fmt.allocPrint(self.step.owner.allocator, "-D{s}={s}", .{ key, value }) catch @panic("OOM");
     self.generate.addArg(option);
 }
 
@@ -78,4 +82,5 @@ fn make(step: *Step, opt: std.Build.Step.MakeOptions) anyerror!void {
     const self: *CmakeStep = @fieldParentPtr("step", step);
     _ = opt;
     try std.fs.deleteTreeAbsolute(self.generate_dir);
+    return error.WOLOLO;
 }
