@@ -1,7 +1,6 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    @setEvalBranchQuota(2000);
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
@@ -36,8 +35,10 @@ pub fn build(b: *std.Build) void {
     inline for (git2_include_paths) |inc| {
         libgit2.addIncludePath(b.path(inc));
     }
-    inline for (cli_system_libs) |l| {
-        libgit2.linkSystemLibrary(l);
+    if (!target.result.isWasm()) {
+        inline for (cli_system_libs) |lib| {
+            libgit2.linkSystemLibrary(lib);
+        }
     }
 
     libgit2.addCSourceFiles(.{
@@ -60,7 +61,7 @@ pub fn build(b: *std.Build) void {
     const features_h = b.addConfigHeader(.{
         .include_path = "configheader/git2_features.h",
         .style = .{ .cmake = b.path("src/util/git2_features.h.in") },
-    }, header_config);
+    }, target_header_config(target));
     libgit2.addIncludePath(features_h.getOutput().dirname());
     git2_exe.addIncludePath(features_h.getOutput().dirname());
 
@@ -83,8 +84,10 @@ pub fn build(b: *std.Build) void {
         inline for (git2_include_paths) |inc| {
             git2_util.addIncludePath(b.path(inc));
         }
-        inline for (cli_system_libs) |lib| {
-            git2_util.linkSystemLibrary(lib);
+        if (!target.result.isWasm()) {
+            inline for (cli_system_libs) |lib| {
+                git2_util.linkSystemLibrary(lib);
+            }
         }
         libgit2.linkLibrary(git2_util);
         b.installArtifact(git2_util);
@@ -98,7 +101,7 @@ pub fn build(b: *std.Build) void {
         const pcre_config_h = b.addConfigHeader(.{
             .include_path = "configheader/config.h",
             .style = .{ .cmake = b.path("deps/pcre/config.h.in") },
-        }, header_config);
+        }, target_header_config(target));
         pcre.addIncludePath(pcre_config_h.getOutput().dirname());
         pcre.addCSourceFiles(.{
             .files = &pcre_files,
@@ -150,27 +153,42 @@ pub const macros = .{
 pub const common_flags = .{
     // "-Wall",
     // "-Wextra",
-    "-fvisibility=hidden",
-    "-fPIC",
-    // "-Wno-documentation-deprecated-sync",
-    // "-Wno-missing-field-initializers",
+    "-Wformat-security",
+    "-Wformat",
+    "-Wno-bad-function-cast",
+    "-Wno-missing-field-initializers",
+    "-Wno-pointer-arith",
+    "-Wno-sign-compare",
+    "-Wno-unused-but-set-variable",
+    "-Wunused",
+    // "-Wc99-c11-compat",
+    // "-Wdeclaration-after-statement",
+    // "-Werror",
     // "-Wmissing-declarations",
+    // "-Wno-documentation-deprecated-sync",
+    // "-Wno-int-conversion",
+    // "-Wno-unused-variable",
+    // "-Wshift-count-overflow",
     // "-Wstrict-aliasing",
     // "-Wstrict-prototypes",
-    // "-Wdeclaration-after-statement",
-    // "-Wshift-count-overflow",
-    // "-Wunused-const-variable",
     // "-Wunused-function",
-    // "-Wint-conversion",
-    // "-Wc99-c11-compat",
-    "-Wformat",
-    "-Wformat-security",
-    "-g",
     "-D_DEBUG",
     "-D_GNU_SOURCE",
+    "-fPIC",
+    "-fvisibility=hidden",
+    "-g",
+    // "-pedantic-errors",
+    // "-pedantic",
     // "-O0",
     // "-std=c90",
 };
+
+pub fn target_header_config(t: std.Build.ResolvedTarget) @TypeOf(header_config) {
+    _ = t;
+    var conf_h = header_config;
+    conf_h.GIT_ARCH_64 = 1;
+    return conf_h;
+}
 
 pub const header_config = .{
     .GIT_ARCH_64 = 1,
@@ -188,6 +206,9 @@ pub const header_config = .{
     .GIT_RAND_GETLOADAVG = 1,
     .GIT_REGEX_BUILTIN = 1,
     .GIT_SHA1_COLLISIONDETECT = 1,
+    .GIT_SHA1_OPENSSL = 0,
+    .GIT_SHA256_BUILTIN = 0,
+    .GIT_SHA256_MBEDTLS = 0,
     .GIT_SHA256_OPENSSL = 1,
     .GIT_SSH = 1,
     .GIT_SSH_EXEC = 1,
