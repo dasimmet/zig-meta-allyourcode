@@ -11,6 +11,8 @@ but can be used to build your C/C++ dependency libraries.
 
 I'm still working out some cacheing issues, the cmake stage2 partially gets rerun ATM.
 
+the package also has a custom `CMakeStep` that will configure and build and install a cmake project,
+and providdes a `.install(b, name)` function to get the artifacts:
 ```
 zig fetch --save https://github.com/dasimmet/zig-meta-allyourcode/archive/refs/heads/master.tar.gz
 ```
