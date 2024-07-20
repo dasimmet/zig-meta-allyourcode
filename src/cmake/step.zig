@@ -39,7 +39,7 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     // and pass arguments for both to it
     // otherwise we cannot work with the zig cache, as cmake wants to know the output
     // directory of gmake
-    const bs_run = std.Build.Step.Run.create(b, "cmake");
+    const bs_run = std.Build.Step.Run.create(b, opt.name);
     bs_run.addFileArg(tc.CMAKE_WRAPPER);
     bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
     bs_run.setEnvironmentVariable("MAKEFLAGS", makeflags);
