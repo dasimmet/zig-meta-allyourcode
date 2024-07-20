@@ -12,7 +12,7 @@ pub fn build(b: *std.Build) void {
     if (b.lazyDependency("sqlite3_cmake", .{})) |sqlite3_dep| {
         const cmakeStep = meta_allyourcode.addCMakeStep(b, .{
             .target = target,
-            .name = "cmake",
+            .name = "cmake sqlite3",
             .source_dir = sqlite3_dep.path(""),
             .verbose = b.option(
                 bool,
