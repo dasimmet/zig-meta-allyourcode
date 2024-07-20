@@ -16,6 +16,7 @@ pub const Options = struct {
     name: []const u8,
     source_dir: LazyPath,
     toolchain: ?*Toolchain = null,
+    verbose: bool = false,
 };
 
 pub fn init(b: *std.Build, opt: Options) *CmakeStep {
@@ -42,7 +43,7 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     bs_run.addFileArg(tc.CMAKE_WRAPPER);
     bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
     bs_run.setEnvironmentVariable("MAKEFLAGS", makeflags);
-    if (b.verbose) bs_run.stdio = .inherit;
+    if (opt.verbose) bs_run.stdio = .inherit;
 
     bs_run.addFileArg(tc.CMAKE);
     bs_run.addFileArg(tc.MAKE);
