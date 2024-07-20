@@ -14,6 +14,11 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .name = "cmake",
             .source_dir = sqlite3_dep.path(""),
+            .verbose = b.option(
+                bool,
+                "verbose-cmake",
+                "print cmake ouptut",
+            ) orelse false,
         });
         cmakeStep.addCmakeDefine("CMAKE_BUILD_TYPE", "Release");
         const sqlite3_install = cmakeStep.install(b, "");
