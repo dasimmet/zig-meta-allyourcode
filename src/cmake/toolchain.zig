@@ -14,7 +14,7 @@ CMAKE_WRAPPER: LazyPath,
 ZIG: []const u8 = "zig",
 
 pub const Options = struct {
-    optimize: std.builtin.OptimizeMode = .ReleaseFast,
+    optimize: std.builtin.OptimizeMode = .ReleaseSmall,
 };
 pub fn zigBuildDefaults(b: *std.Build, opt: Options) *Toolchain {
     const zig_cc = b.addExecutable(.{

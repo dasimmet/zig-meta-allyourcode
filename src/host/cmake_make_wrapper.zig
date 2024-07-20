@@ -43,7 +43,7 @@ pub fn main() !void {
         }
     }
 
-    if (builtin.mode == .Debug) {
+    if (builtin.mode == .Debug or builtin.mode == .ReleaseSafe) {
         try stderr.writer().print("cmake cmd: ", .{});
         for (gen_args.items) |it| {
             try stderr.writer().print("{s} ", .{it});
