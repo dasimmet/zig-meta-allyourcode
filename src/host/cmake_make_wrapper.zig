@@ -42,14 +42,19 @@ pub fn main() !void {
             return error.UnknownArgument;
         }
     }
-    for (gen_args.items) |it| {
-        debug_log("{s} ", .{it});
+
+    if (builtin.mode == .Debug) {
+        try stderr.writer().print("cmake cmd: ", .{});
+        for (gen_args.items) |it| {
+            try stderr.writer().print("{s} ", .{it});
+        }
+        try stderr.writer().print("\nmake cmd: ", .{});
+        for (build_args.items) |it| {
+            try stderr.writer().print("{s} ", .{it});
+        }
+        try stderr.writer().print("\n", .{});
     }
-    debug_log("\n", .{});
-    for (build_args.items) |it| {
-        debug_log("{s} ", .{it});
-    }
-    debug_log("\n", .{});
+
     try callChild(gen_args.items, arena.allocator());
     try callChild(build_args.items, arena.allocator());
 }
@@ -115,11 +120,5 @@ fn forward_stdio_pipes(proc: *std.process.Child) !void {
             const count = try stderr.write(stderr_f.buf[stderr_f.head..stderr_f.count]);
             stderr_f.discard(count);
         }
-    }
-}
-
-fn debug_log(comptime fmt: []const u8, args: anytype) void {
-    if (builtin.mode == .Debug) {
-        std.debug.print(fmt, args);
     }
 }

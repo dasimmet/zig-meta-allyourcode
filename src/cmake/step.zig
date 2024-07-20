@@ -22,7 +22,7 @@ pub const Options = struct {
 pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const target = opt.target orelse b.graph.host;
     const target_triple = target.result.zigTriple(b.allocator) catch @panic("OOM");
-    const tc = opt.toolchain orelse Toolchain.zigBuildDefaults(b, null);
+    const tc = opt.toolchain orelse Toolchain.zigBuildDefaults(b, .{});
 
     const cpu_count = std.Thread.getCpuCount() catch blk: {
         std.log.err("Could not get CPU Count!", .{});
@@ -35,10 +35,6 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
         .{cpu_count},
     ) catch @panic("OOM");
 
-    // we compile a simple tool to run both cmake and build step after one another,
-    // and pass arguments for both to it
-    // otherwise we cannot work with the zig cache, as cmake wants to know the output
-    // directory of gmake
     const bs_run = std.Build.Step.Run.create(b, opt.name);
     bs_run.addFileArg(tc.CMAKE_WRAPPER);
     bs_run.setEnvironmentVariable("ZIG", tc.ZIG);

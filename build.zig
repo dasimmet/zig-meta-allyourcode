@@ -104,7 +104,9 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
             cm_step.dependOn(&cm_install.step);
         }
 
-        const cmake_tc = cmake.Toolchain.zigBuildDefaults(b, cmake_options.optimize);
+        const cmake_tc = cmake.Toolchain.zigBuildDefaults(b, .{
+            .optimize = cmake_options.optimize,
+        });
         cmake_tc.CMAKE = dep.artifact("cmake").getEmittedBin();
 
         if (b.lazyDependency("gnumake", .{
@@ -176,7 +178,7 @@ pub fn addCMakeStep(b: *std.Build, opt: cmake.CMakeStep.Options) *cmake.CMakeSte
         .dependency = .cmake,
     });
     if (opt.toolchain == null) {
-        const tc = cmake.Toolchain.zigBuildDefaults(this_dep.builder, null);
+        const tc = cmake.Toolchain.zigBuildDefaults(this_dep.builder, .{});
         tc.CMAKE = this_dep.namedWriteFiles("cmake").getDirectory().path(this_dep.builder, "bin/cmake");
         if (this_dep.builder.lazyDependency("gnumake", .{
             .target = b.graph.host,
