@@ -127,8 +127,8 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
     const cmake_stage1_target = blk: {
         if (cmake_stage1_target_opt) |tstr| {
             const query = std.Build.parseTargetQuery(.{
-                    .arch_os_abi = tstr,
-                }) catch @panic("Unknown Target");
+                .arch_os_abi = tstr,
+            }) catch @panic("Unknown Target");
             break :blk b.resolveTargetQuery(query);
         }
         break :blk b.host;
