@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) void {
     cmake_bootstrap.linkLibCpp();
     addMacros(b, cmake_bootstrap);
 
-    const generated_headers = ConfigHeaders.build(b);
+    const generated_headers = ConfigHeaders.build(b, target);
     cmake_bootstrap.addIncludePath(generated_headers);
     cmake_bootstrap.addIncludePath(b.path("Source"));
     cmake_bootstrap.addIncludePath(b.path("Source/LexerParser"));
@@ -68,9 +68,9 @@ pub fn build(b: *std.Build) void {
     cmake_bootstrap.linkLibrary(lexer);
 }
 
-pub fn stage2(b: *std.Build, tc: *Toolchain) *CMakeStep {
+pub fn stage2(b: *std.Build, tc: *Toolchain, target: std.Build.ResolvedTarget) *CMakeStep {
     const cmakeStep = CMakeStep.init(b, .{
-        .target = b.graph.host,
+        .target = target,
         .toolchain = tc,
         .name = "cmake_stage2",
         .source_dir = b.path(""),
@@ -96,14 +96,23 @@ pub fn stage2(b: *std.Build, tc: *Toolchain) *CMakeStep {
 }
 
 pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
+    const target = comp.rootModuleTarget();
+    const not_on_windows = if (target.os.tag == .windows) "0" else "1";
+    const on_windows = if (target.os.tag == .windows) "1" else "0";
+    if (target.os.tag == .windows) {
+        comp.defineCMacro(
+            "KWSYS_ENCODING_DEFAULT_CODEPAGE",
+            "CP_ACP",
+        );
+    }
     inline for (.{
         // kwsys
         .{ "KWSYS_C_HAS_CLOCK_GETTIME_MONOTONIC", "0" },
-        .{ "KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H", "0" },
-        .{ "KWSYS_CXX_HAS_SETENV", "1" },
-        .{ "KWSYS_CXX_HAS_UNSETENV", "1" },
-        .{ "KWSYS_CXX_HAS_UTIMENSAT", "0" },
-        .{ "KWSYS_CXX_HAS_UTIMES", "0" },
+        .{ "KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H", on_windows },
+        .{ "KWSYS_CXX_HAS_SETENV", not_on_windows },
+        .{ "KWSYS_CXX_HAS_UNSETENV", not_on_windows },
+        .{ "KWSYS_CXX_HAS_UTIMENSAT", "1" },
+        .{ "KWSYS_CXX_HAS_UTIMES", "1" },
         .{ "KWSYS_CXX_STAT_HAS_ST_MTIM", "0" },
         .{ "KWSYS_CXX_STAT_HAS_ST_MTIMESPEC", "0" },
         .{ "KWSYS_NAMESPACE", "cmsys" },
@@ -222,6 +231,19 @@ pub const KwSys = struct {
             .root = b.path("Source/kwsys"),
             .flags = &Flags.C,
         });
+        if (kwsys.rootModuleTarget().os.tag == .windows) {
+            kwsys.addCSourceFiles(.{
+                .files = &.{"ProcessWin32.c"},
+                .root = b.path("Source/kwsys"),
+                .flags = &Flags.C,
+            });
+        } else {
+            kwsys.addCSourceFiles(.{
+                .files = &.{"ProcessUNIX.c"},
+                .root = b.path("Source/kwsys"),
+                .flags = &Flags.C,
+            });
+        }
         return kwsys;
     }
 
@@ -236,7 +258,6 @@ pub const KwSys = struct {
     };
     pub const C_SOURCES = .{
         "EncodingC.c",
-        "ProcessUNIX.c",
         "String.c",
         "System.c",
         "Terminal.c",
@@ -543,14 +564,16 @@ pub const ConfigHeaders = struct {
         CMAKE_DATA_DIR: []const u8 = "/bootstrap-not-installed",
         CMake_DEFAULT_RECURSION_LIMIT: u16 = 400,
         CMAKE_DOC_DIR: []const u8 = "DOC",
-        CMake_VERSION: []const u8 = "3.30.0-bootstrap",
         CMake_VERSION_IS_DIRTY: u16 = 1,
         CMake_VERSION_MAJOR: u16 = 3,
         CMake_VERSION_MINOR: u16 = 30,
         CMake_VERSION_PATCH: u16 = 0,
         CMake_VERSION_SUFFIX: []const u8 = "bootstrap",
+        CMake_VERSION: []const u8 = "3.30.0-bootstrap",
         CURL_CA_BUNDLE: []const u8 = "",
         CURL_CA_PATH: []const u8 = "",
+        HAVE_SYS_SOCKET_H: u16 = 1,
+        HAVE_SYS_WAIT_H: u16 = 1,
         KWSYS_BUILD_SHARED: u16 = 0,
         KWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H: u16 = 0,
         KWSYS_CXX_HAS_EXT_STDIO_FILEBUF_H: u16 = 0,
@@ -567,9 +590,9 @@ pub const ConfigHeaders = struct {
         KWSYS_SYSTEMTOOLS_USE_TRANSLATION_MAP: u16 = 1,
     };
 
-    pub fn build(b: *std.Build) std.Build.LazyPath {
+    pub fn build(b: *std.Build, target: std.Build.ResolvedTarget) std.Build.LazyPath {
         const generated_headers = b.addNamedWriteFiles("generated_headers");
-        for (configHeaders(b)) |h| {
+        for (configHeaders(b, target)) |h| {
             const h_p = b.pathJoin(&.{
                 "generated_headers",
                 h.include_path,
@@ -583,8 +606,18 @@ pub const ConfigHeaders = struct {
         };
         return base_lp.path(b, "generated_headers");
     }
-    pub fn configHeaders(b: *std.Build) []*std.Build.Step.ConfigHeader {
+    pub fn configHeaders(b: *std.Build, target: std.Build.ResolvedTarget) []*std.Build.Step.ConfigHeader {
         var opts = Options{};
+        if (target.result.os.tag == .windows) {
+            opts.HAVE_SYS_SOCKET_H = 0;
+            opts.HAVE_SYS_WAIT_H = 0;
+            opts.KWSYS_STL_HAS_WSTRING = 1;
+            opts.KWSYS_CXX_HAS_SETENV = 0;
+            opts.KWSYS_CXX_HAS_UNSETENV = 0;
+            opts.KWSYS_CXX_HAS_UTIMENSAT = 0;
+            opts.KWSYS_CXX_HAS_UTIMES = 0;
+        }
+
         inline for (@typeInfo(Options).Struct.fields) |f| {
             if (b.option(f.type, f.name, f.name ++ " - cmake config header")) |opt| {
                 @field(opts, f.name) = opt;

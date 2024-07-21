@@ -119,7 +119,25 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
         }
     }
 
-    if (b.lazyDependency("cmake", cmake_options)) |dep| {
+    const cmake_stage1_target_opt = b.option(
+        []const u8,
+        "cmake_stage1_target",
+        "The CPU architecture, OS, and ABI to build cmake stage1 for",
+    );
+    const cmake_stage1_target = blk: {
+        if (cmake_stage1_target_opt) |tstr| {
+            const query = std.Build.parseTargetQuery(.{
+                    .arch_os_abi = tstr,
+                }) catch @panic("Unknown Target");
+            break :blk b.resolveTargetQuery(query);
+        }
+        break :blk b.host;
+    };
+
+    if (b.lazyDependency("cmake", .{
+        .target = cmake_stage1_target,
+        .optimize = defaults.optimize,
+    })) |dep| {
         cmake.build(dep.builder);
         const stage1_step = b.step("cmake-stage1", "build the cmake stage1 exe");
         inline for (.{ "cmake", "uv" }) |f| {
@@ -151,6 +169,7 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
         const stage2_step = cmake.stage2(
             dep.builder,
             cmake_tc,
+            cmake_options.target,
         );
         _ = stage2_step.installNamedWriteFile(b, "cmake");
         const stage2_install = b.addInstallDirectory(.{
