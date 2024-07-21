@@ -121,7 +121,7 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
 
     if (b.lazyDependency("cmake", cmake_options)) |dep| {
         cmake.build(dep.builder);
-        const cm_step = b.step("cmake-bs", "build the cmake stage1 exe");
+        const stage1_step = b.step("cmake-stage1", "build the cmake stage1 exe");
         inline for (.{ "cmake", "uv" }) |f| {
             const cm_art = dep.artifact(f);
             const cm_name = if (cm_art.kind == .lib and cm_art.linkage == .dynamic)
@@ -132,7 +132,7 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
             const cm_install = b.addInstallArtifact(cm_art, .{
                 .dest_sub_path = cm_name,
             });
-            cm_step.dependOn(&cm_install.step);
+            stage1_step.dependOn(&cm_install.step);
         }
 
         const cmake_tc = cmake.Toolchain.zigBuildDefaults(b, .{
@@ -148,18 +148,18 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
             cmake_tc.MAKE = gnumake_exe.getEmittedBin();
         }
 
-        const cmake_step = cmake.stage2(
+        const stage2_step = cmake.stage2(
             dep.builder,
             cmake_tc,
         );
-        _ = cmake_step.installNamedWriteFile(b, "cmake");
-        const cmake2_install = b.addInstallDirectory(.{
-            .source_dir = cmake_step.install_dir,
+        _ = stage2_step.installNamedWriteFile(b, "cmake");
+        const stage2_install = b.addInstallDirectory(.{
+            .source_dir = stage2_step.install_dir,
             .install_dir = .{ .custom = "cmake" },
             .install_subdir = "",
         });
-        cmake2_install.step.dependOn(&cmake_step.step);
-        b.getInstallStep().dependOn(&cmake2_install.step);
+        stage2_install.step.dependOn(&stage2_step.step);
+        b.getInstallStep().dependOn(&stage2_install.step);
         b.step("cmake", "run cmake bootstrap stage2 and install").dependOn(&cmake2_install.step);
     } else {
         _ = b.addNamedWriteFiles("cmake");
