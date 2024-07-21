@@ -10,8 +10,8 @@ MAKE: LazyPath = .{ .cwd_relative = "make" },
 // and pass arguments for both to it
 // otherwise we cannot work with the zig cache, as cmake wants to know the output
 // directory of gmake
-CMAKE_WRAPPER: LazyPath,
-ZIG: []const u8 = "zig",
+CMAKE_BUILD_RUNNER: LazyPath,
+ZIG_EXE: []const u8 = "zig",
 
 pub const Options = struct {
     optimize: std.builtin.OptimizeMode = .ReleaseSmall,
@@ -32,9 +32,9 @@ pub fn zigBuildDefaults(b: *std.Build, opt: Options) *Toolchain {
         .target = b.graph.host,
         .optimize = opt.optimize,
     });
-    const cmake_wrapper = b.addExecutable(.{
-        .name = "cmake_make_wrapper",
-        .root_source_file = b.path("src/host/cmake_make_wrapper.zig"),
+    const cmake_build_runner = b.addExecutable(.{
+        .name = "cmake_build_runner",
+        .root_source_file = b.path("src/host/cmake_build_runner.zig"),
         .target = b.graph.host,
         .optimize = opt.optimize,
     });
@@ -43,8 +43,8 @@ pub fn zigBuildDefaults(b: *std.Build, opt: Options) *Toolchain {
     self.* = .{
         .CC = zig_cc.getEmittedBin(),
         .CXX = zig_cxx.getEmittedBin(),
-        .ZIG = b.graph.zig_exe,
-        .CMAKE_WRAPPER = cmake_wrapper.getEmittedBin(),
+        .ZIG_EXE = b.graph.zig_exe,
+        .CMAKE_BUILD_RUNNER = cmake_build_runner.getEmittedBin(),
     };
     return self;
 }

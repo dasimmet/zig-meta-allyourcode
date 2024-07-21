@@ -9,6 +9,11 @@ const builtin = @import("builtin");
 pub const cmake = @import("src/cmake.zig");
 pub const libgit2 = @import("src/libgit2.zig");
 
+pub const DefaultBuildOptions = struct {
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+};
+
 pub fn build(b: *std.Build) void {
     const defaults: DefaultBuildOptions = .{
         .target = b.standardTargetOptions(.{}),
@@ -20,15 +25,15 @@ pub fn build(b: *std.Build) void {
     };
 
     if (b.option(
-        DependencyBuild,
+        SubBuild,
         "dependency",
-        "use this option to fetch a single named transitive dependency",
+        "use this option to fetch only the required transitive dependencies",
     )) |d| {
-        inline for (DependencyBuild.mapping) |dep_build| {
+        inline for (SubBuild.mapping) |dep_build| {
             if (dep_build[0] == d) dep_build[1](b, defaults);
         }
     } else {
-        inline for (DependencyBuild.mapping) |dep_build| {
+        inline for (SubBuild.mapping) |dep_build| {
             dep_build[1](b, defaults);
         }
     }
@@ -45,19 +50,45 @@ pub fn build(b: *std.Build) void {
 
     b.step(
         "example",
-        "build an example depending on this build",
+        "zig build the example subdirectory",
     ).dependOn(&example.step);
 }
 
-pub const DependencyBuild = enum {
+pub fn addCMakeStep(b: *std.Build, opt: cmake.CMakeStep.Options) *cmake.CMakeStep {
+    const this_dep = b.dependencyFromBuildZig(meta_allyourcode, .{
+        .dependency = .cmake,
+    });
+    if (opt.toolchain == null) {
+        const tc = cmake.Toolchain.zigBuildDefaults(this_dep.builder, .{});
+        tc.CMAKE = this_dep.namedWriteFiles("cmake").getDirectory().path(this_dep.builder, "bin/cmake");
+        if (this_dep.builder.lazyDependency("gnumake", .{
+            .target = b.graph.host,
+        })) |gnumake| {
+            const gnumake_exe = gnumake.artifact("make");
+            tc.MAKE = gnumake_exe.getEmittedBin();
+        }
+        return cmake.CMakeStep.init(b, .{
+            .name = opt.name,
+            .source_dir = opt.source_dir,
+            .target = opt.target,
+            .toolchain = tc,
+            .verbose = opt.verbose,
+            .defines = opt.defines,
+        });
+    }
+
+    return cmake.CMakeStep.init(b, opt);
+}
+
+pub const SubBuild = enum {
     cmake,
     libgit2,
     gnumake,
 
     pub const mapping = .{
-        .{ DependencyBuild.cmake, addCMakeBootstrap },
-        .{ DependencyBuild.libgit2, addLibGitBuild },
-        .{ DependencyBuild.gnumake, addGnuMakeBuild },
+        .{ SubBuild.cmake, addCMakeBootstrap },
+        .{ SubBuild.libgit2, addLibGitBuild },
+        .{ SubBuild.gnumake, addGnuMakeBuild },
     };
 };
 
@@ -168,35 +199,4 @@ pub fn mergeStructFields(ta: type, tb: type) type {
         .decls = &.{},
         .is_tuple = typeinfo_a.Struct.is_tuple,
     } });
-}
-
-pub const DefaultBuildOptions = struct {
-    target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
-};
-
-pub fn addCMakeStep(b: *std.Build, opt: cmake.CMakeStep.Options) *cmake.CMakeStep {
-    const this_dep = b.dependencyFromBuildZig(meta_allyourcode, .{
-        .dependency = .cmake,
-    });
-    if (opt.toolchain == null) {
-        const tc = cmake.Toolchain.zigBuildDefaults(this_dep.builder, .{});
-        tc.CMAKE = this_dep.namedWriteFiles("cmake").getDirectory().path(this_dep.builder, "bin/cmake");
-        if (this_dep.builder.lazyDependency("gnumake", .{
-            .target = b.graph.host,
-        })) |gnumake| {
-            const gnumake_exe = gnumake.artifact("make");
-            tc.MAKE = gnumake_exe.getEmittedBin();
-        }
-        return cmake.CMakeStep.init(b, .{
-            .name = opt.name,
-            .source_dir = opt.source_dir,
-            .target = opt.target,
-            .toolchain = tc,
-            .verbose = opt.verbose,
-            .defines = opt.defines,
-        });
-    }
-
-    return cmake.CMakeStep.init(b, opt);
 }

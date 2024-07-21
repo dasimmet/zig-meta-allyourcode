@@ -39,8 +39,8 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
 
     const bs_run = std.Build.Step.Run.create(b, opt.name);
     const self = b.allocator.create(CmakeStep) catch @panic("OOM");
-    bs_run.addFileArg(tc.CMAKE_WRAPPER);
-    bs_run.setEnvironmentVariable("ZIG_EXE", tc.ZIG);
+    bs_run.addFileArg(tc.CMAKE_BUILD_RUNNER);
+    bs_run.setEnvironmentVariable("ZIG_EXE", tc.ZIG_EXE);
     bs_run.setEnvironmentVariable("MAKEFLAGS", makeflags);
     if (opt.verbose) |verbose| {
         if (verbose) bs_run.stdio = .inherit;

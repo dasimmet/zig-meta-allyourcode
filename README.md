@@ -5,11 +5,9 @@ This repository is for writing `build.zig` configurations for other c/c++ projec
 
 ## CMake
 
-using the zig build system, this repository bootstraps `cmake` `3.30.0` without any system cmake
+using the zig build system, this repository bootstraps `cmake` `3.30.1` without any system cmake
 or the usual shellscript method. it takes a while and is only tested on x64 linux,
 but can be used to build your C/C++ dependency libraries.
-
-I'm still working out some cacheing issues, the cmake stage2 partially gets rerun ATM.
 
 the package also has a custom `CMakeStep` that will configure and build and install a cmake project,
 and providdes a `.install(b, name)` function to get the artifacts:
