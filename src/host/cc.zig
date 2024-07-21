@@ -72,7 +72,6 @@ pub fn subcommand(env_key: []const u8, cmd: []const []const u8) !void {
 }
 
 fn canWriteDevStdout() bool {
-    std.fs.accessAbsolute("/dev/stdout", .{ .mode = .write_only })
-        catch return false;
+    std.fs.accessAbsolute("/dev/stdout", .{ .mode = .write_only }) catch return false;
     return true;
 }

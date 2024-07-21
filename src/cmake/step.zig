@@ -34,7 +34,7 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const makeflags = std.fmt.allocPrint(
         b.allocator,
         "-j{d} {s}",
-        .{cpu_count, opt.makeflags},
+        .{ cpu_count, opt.makeflags },
     ) catch @panic("OOM");
 
     const bs_run = std.Build.Step.Run.create(b, opt.name);
