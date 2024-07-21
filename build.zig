@@ -130,6 +130,8 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
         cmake2_install.step.dependOn(&cmake_step.step);
         b.getInstallStep().dependOn(&cmake2_install.step);
         b.step("cmake", "run cmake bootstrap stage2 and install").dependOn(&cmake2_install.step);
+    } else {
+        _ = b.addNamedWriteFiles("cmake");
     }
 }
 
