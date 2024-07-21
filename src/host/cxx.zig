@@ -1,5 +1,5 @@
 const cc = @import("cc.zig");
 
 pub fn main() !void {
-    return cc.subcommand("ZIG", &.{"c++"});
+    return cc.subcommand("ZIG_EXE", &.{"c++"});
 }

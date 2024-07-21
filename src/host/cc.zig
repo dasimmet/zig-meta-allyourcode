@@ -2,7 +2,7 @@ const std = @import("std");
 
 // run a zig cc subcommand with ZIG from env
 pub fn main() !void {
-    return subcommand("ZIG", &.{"cc"});
+    return subcommand("ZIG_EXE", &.{"cc"});
 }
 
 // takes a path from the environment and calls its subcommand
@@ -38,7 +38,7 @@ pub fn subcommand(env_key: []const u8, cmd: []const []const u8) !void {
         } else {
             // workaround for zig c++ not writing to stdout. this only works on unix hosts
             const is_stdout_arg = std.mem.eql(u8, last_arg, "-o") and std.mem.eql(u8, arg, "-");
-            if (is_stdout_arg and try std.fs.accessAbsolute("/dev/stdout", .{ .mode = .write_only })) {
+            if (is_stdout_arg and canWriteDevStdout()) {
                 try args.append("/dev/stdout");
             } else {
                 try args.append(arg);
@@ -69,4 +69,10 @@ pub fn subcommand(env_key: []const u8, cmd: []const []const u8) !void {
             unreachable;
         },
     }
+}
+
+fn canWriteDevStdout() bool {
+    std.fs.accessAbsolute("/dev/stdout", .{ .mode = .write_only })
+        catch return false;
+    return true;
 }

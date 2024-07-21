@@ -16,7 +16,8 @@ pub const Options = struct {
     name: []const u8,
     source_dir: LazyPath,
     toolchain: ?*Toolchain = null,
-    verbose: bool = false,
+    verbose: ?bool = null,
+    makeflags: []const u8 = "",
     defines: []const struct { []const u8, []const u8 } = &.{},
 };
 
@@ -32,16 +33,18 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
 
     const makeflags = std.fmt.allocPrint(
         b.allocator,
-        "-j{d}",
-        .{cpu_count},
+        "-j{d} {s}",
+        .{cpu_count, opt.makeflags},
     ) catch @panic("OOM");
 
     const bs_run = std.Build.Step.Run.create(b, opt.name);
     const self = b.allocator.create(CmakeStep) catch @panic("OOM");
     bs_run.addFileArg(tc.CMAKE_WRAPPER);
-    bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
+    bs_run.setEnvironmentVariable("ZIG_EXE", tc.ZIG);
     bs_run.setEnvironmentVariable("MAKEFLAGS", makeflags);
-    if (opt.verbose) bs_run.stdio = .inherit;
+    if (opt.verbose) |verbose| {
+        if (verbose) bs_run.stdio = .inherit;
+    } else if (b.verbose) bs_run.stdio = .inherit;
 
     bs_run.addFileArg(tc.CMAKE);
     bs_run.addFileArg(tc.MAKE);

@@ -18,14 +18,19 @@ zig fetch --save https://github.com/dasimmet/zig-meta-allyourcode/archive/refs/h
 ```
 build.zig (from [example](./example/build.zig)):
 ```
-const meta_allyourcode = @import("meta_allyourcode");
 pub fn build() void {
+  const meta_import = b.lazyImport(@This(), "meta_allyourcode");
+
+  if (meta_import) |meta_allyourcode| {}
   const cmakeStep = meta_allyourcode.addCMakeStep(b, .{
     .target = b.standardTargetOptions(.{}),
     .name = "cmake",
     .source_dir = b.path(""),
+      .defines = &.{
+          .{ "CMAKE_BUILD_TYPE", if (optimize == .Debug) "Debug" else "Release" },
+      },
   });
-  cmakeStep.addCmakeDefine("CMAKE_BUILD_TYPE","Release");
+  cmakeStep.addCmakeDefine();
   const install_step = cmakeStep.install(b, "");
   b.getInstallStep().dependOn(&install_step.step);
 }

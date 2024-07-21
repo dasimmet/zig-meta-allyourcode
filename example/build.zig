@@ -6,10 +6,14 @@
 const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
     const meta_import = b.lazyImport(@This(), "meta_allyourcode");
 
     // const optimize = b.standardOptimizeOption(.{});
-    if (b.lazyDependency("sqlite3_cmake", .{})) |sqlite3_dep| {
+    if (b.lazyDependency("sqlite3_cmake", .{
+        .target = target,
+        .optimize = optimize,
+    })) |sqlite3_dep| {
         if (meta_import) |meta_allyourcode| {
             const cmakeStep = meta_allyourcode.addCMakeStep(b, .{
                 .target = target,
@@ -19,9 +23,9 @@ pub fn build(b: *std.Build) void {
                     bool,
                     "verbose-cmake",
                     "print cmake ouptut",
-                ) orelse false,
+                ),
                 .defines = &.{
-                    .{ "CMAKE_BUILD_TYPE", "Release" },
+                    .{ "CMAKE_BUILD_TYPE", if (optimize == .Debug) "Debug" else "Release" },
                 },
             });
             const sqlite3_install = cmakeStep.install(b, "");
