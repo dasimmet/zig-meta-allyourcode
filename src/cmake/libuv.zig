@@ -22,7 +22,7 @@ pub fn build(b: *std.Build, opt: anytype) *std.Build.Step.Compile {
             .root = b.path("Utilities/cmlibuv/src/win"),
             .flags = &.{"-D_GNU_SOURCE"},
         });
-        libuv.addIncludePath(b.path("Utilities/cmlibuv/src/win"));
+        // libuv.addIncludePath(b.path("Utilities/cmlibuv/src/win"));
     } else {
         libuv.addCSourceFiles(.{
             .files = LibUV.UNIX_C_SOURCES,

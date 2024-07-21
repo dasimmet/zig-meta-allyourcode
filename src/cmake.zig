@@ -99,12 +99,12 @@ pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
     const target = comp.rootModuleTarget();
     const not_on_windows = if (target.os.tag == .windows) "0" else "1";
     const on_windows = if (target.os.tag == .windows) "1" else "0";
-    if (target.os.tag == .windows) {
-        comp.defineCMacro(
-            "KWSYS_ENCODING_DEFAULT_CODEPAGE",
-            "CP_ACP",
-        );
-    }
+    // if (target.os.tag == .windows) {
+    //     comp.defineCMacro(
+    //         "KWSYS_ENCODING_DEFAULT_CODEPAGE",
+    //         "CP_ACP",
+    //     );
+    // }
     inline for (.{
         // kwsys
         .{ "KWSYS_C_HAS_CLOCK_GETTIME_MONOTONIC", "0" },
@@ -143,12 +143,12 @@ pub const Flags = struct {
         "-DNDEBUG",
         "-fno-common",
         "-O3",
+        "-pedantic-errors",
         "-pedantic",
         "-Wall",
         "-Werror-implicit-function-declaration",
         "-Werror",
         "-Wextra",
-        // "-Wformat-nonliteral",
         "-Wformat-security",
         "-Wformat-y2k",
         "-Wformat",
@@ -156,11 +156,14 @@ pub const Flags = struct {
         "-Wno-error=unused-function",
         "-Wno-error=unused-parameter",
         "-Wno-error=unused",
+        "-Wno-nested-anon-types",
+        "-Wno-strict-prototypes",
         "-Wnon-virtual-dtor",
         "-Wpointer-arith",
         "-Wshadow",
         "-Wundef",
         "-Wwrite-strings",
+        // "-Wformat-nonliteral",
     };
     pub const C = .{
         "-std=c11",
@@ -215,6 +218,9 @@ pub const KwSys = struct {
         kwsys.linkLibC();
         kwsys.linkLibCpp();
         addMacros(b, kwsys);
+        if (kwsys.rootModuleTarget().os.tag == .windows) {
+            kwsys.defineCMacro("KWSYS_ENCODING_DEFAULT_CODEPAGE", "CP_ACP");
+        }
         kwsys.addIncludePath(opt.generated_headers);
         kwsys.addIncludePath(b.path("Source/kwsys"));
         kwsys.addIncludePath(b.path("Utilities"));
