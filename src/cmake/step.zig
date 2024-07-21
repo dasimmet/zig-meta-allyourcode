@@ -17,6 +17,7 @@ pub const Options = struct {
     source_dir: LazyPath,
     toolchain: ?*Toolchain = null,
     verbose: bool = false,
+    defines: []const struct { []const u8, []const u8 } = &.{},
 };
 
 pub fn init(b: *std.Build, opt: Options) *CmakeStep {
@@ -36,6 +37,7 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     ) catch @panic("OOM");
 
     const bs_run = std.Build.Step.Run.create(b, opt.name);
+    const self = b.allocator.create(CmakeStep) catch @panic("OOM");
     bs_run.addFileArg(tc.CMAKE_WRAPPER);
     bs_run.setEnvironmentVariable("ZIG", tc.ZIG);
     bs_run.setEnvironmentVariable("MAKEFLAGS", makeflags);
@@ -46,6 +48,11 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const build_dir = bs_run.addOutputDirectoryArg("build");
 
     bs_run.addPrefixedDirectoryArg("@CM:", opt.source_dir);
+    bs_run.addArg("@GM:install");
+    const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg(
+        "@CM:-DCMAKE_INSTALL_PREFIX=",
+        "install",
+    );
     inline for (.{
         .{ "@CM:-DCMAKE_C_COMPILER=", tc.CC },
         .{ "@CM:-DCMAKE_CXX_COMPILER=", tc.CXX },
@@ -53,13 +60,6 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     }) |it| {
         bs_run.addPrefixedFileArg(it[0], it[1]);
     }
-    const cmake_output_dir = bs_run.addPrefixedOutputDirectoryArg(
-        "@CM:-DCMAKE_INSTALL_PREFIX=",
-        "install",
-    );
-    bs_run.addArg("@GM:install");
-
-    const self = b.allocator.create(CmakeStep) catch @panic("OOM");
     self.* = .{
         .source_dir = opt.source_dir,
         .build_dir = build_dir,
@@ -76,10 +76,13 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     inline for (.{
         .{ "CMAKE_C_COMPILER_TARGET", target_triple },
         .{ "CMAKE_CXX_COMPILER_TARGET", target_triple },
-        .{ "CMAKE_C_COMPILER_WORKS", "1" }, // f-ing cmake writes a "-" file to the source dir without this
+        // .{ "CMAKE_CXX_COMPILER_WORKS", "1" }, // f-ing cmake writes a "-" file to the source dir without this
+        // .{ "CMAKE_C_COMPILER_WORKS", "1" }, // f-ing cmake writes a "-" file to the source dir without this
     }) |it| {
         addCmakeDefine(self, it[0], it[1]);
     }
+    for (opt.defines) |it|
+        addCmakeDefine(self, it[0], it[1]);
     return self;
 }
 

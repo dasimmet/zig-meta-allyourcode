@@ -1,7 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-// run a zig cc subcommand with ZIG from env
+// run both cmake configure and make command in two subsequent subprocesses
+// forwarding stdio through pipes
 pub fn main() !void {
     const stderr = std.io.getStdErr();
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);

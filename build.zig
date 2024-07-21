@@ -192,6 +192,7 @@ pub fn addCMakeStep(b: *std.Build, opt: cmake.CMakeStep.Options) *cmake.CMakeSte
             .target = opt.target,
             .toolchain = tc,
             .verbose = opt.verbose,
+            .defines = opt.defines,
         });
     }
 
