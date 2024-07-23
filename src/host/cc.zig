@@ -19,7 +19,7 @@ pub fn subcommand(env_key: []const u8, cmd: []const []const u8) !void {
     }
     try args.appendSlice(cmd);
     var p_args = std.process.args();
-    var last_arg: []const u8 = "";
+    // var last_arg: []const u8 = "";
     var i: usize = 0;
     while (p_args.next()) |arg| : (i += 1) {
         if (i == 0) {
@@ -36,15 +36,16 @@ pub fn subcommand(env_key: []const u8, cmd: []const []const u8) !void {
                 std.process.exit(1);
             }
         } else {
-            // workaround for zig c++ not writing to stdout. this only works on unix hosts
-            const is_stdout_arg = std.mem.eql(u8, last_arg, "-o") and std.mem.eql(u8, arg, "-");
-            if (is_stdout_arg and canWriteDevStdout()) {
-                try args.append("/dev/stdout");
-            } else {
-                try args.append(arg);
-            }
+            // // workaround for zig c++ not writing to stdout. this only works on unix hosts
+            // const is_stdout_arg = std.mem.eql(u8, last_arg, "-o") and std.mem.eql(u8, arg, "-");
+            // if (is_stdout_arg and canWriteDevStdout()) {
+            //     try args.append("/dev/stdout");
+            // } else {
+            //     try args.append(arg);
+            // }
+            try args.append(arg);
         }
-        last_arg = arg;
+        // last_arg = arg;
     }
     var proc = std.process.Child.init(
         args.items,
