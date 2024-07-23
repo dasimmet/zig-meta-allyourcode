@@ -32,8 +32,8 @@ pub fn build(b: *std.Build) void {
         .flags = &Flags.CXX,
     });
     cmake_bootstrap.addCSourceFiles(.{
-        .files = &CMAKE_UTILITY_SOURCES,
-        .root = b.path("Utilities"),
+        .files = &CMAKE_JSON_SOURCES,
+        .root = b.path("Utilities/cmjsoncpp/src/lib_json"),
         .flags = &Flags.CXX,
     });
     b.installArtifact(cmake_bootstrap);
@@ -154,13 +154,13 @@ pub const Flags = struct {
         "-Wformat",
         "-Wmissing-format-attribute",
         "-Wno-error=unused-function",
-        "-Wno-error=unused-parameter",
         "-Wno-error=unused",
         "-Wno-nested-anon-types",
+        "-Wno-shadow",
         "-Wno-strict-prototypes",
+        "-Wno-unused-parameter",
         "-Wnon-virtual-dtor",
         "-Wpointer-arith",
-        "-Wshadow",
         "-Wundef",
         "-Wwrite-strings",
         // "-Wformat-nonliteral",
@@ -270,11 +270,12 @@ pub const KwSys = struct {
     };
 };
 
-const CMAKE_UTILITY_SOURCES = .{
-    "cmjsoncpp/src/lib_json/json_reader.cpp",
-    "cmjsoncpp/src/lib_json/json_value.cpp",
-    "cmjsoncpp/src/lib_json/json_writer.cpp",
+const CMAKE_JSON_SOURCES = .{
+    "json_reader.cpp",
+    "json_value.cpp",
+    "json_writer.cpp",
 };
+
 const CMAKE_CXX_SOURCES = .{
     "cm_fileno.cxx",
     "cmAddCompileDefinitionsCommand.cxx",
