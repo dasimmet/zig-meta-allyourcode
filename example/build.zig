@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
                 .target = target,
                 .name = "cmake sqlite3",
                 .source_dir = sqlite3_dep.path(""),
+                .global_cache = true,
                 .verbose = b.option(
                     bool,
                     "verbose-cmake",

@@ -57,13 +57,17 @@ pub fn build(b: *std.Build) void {
 pub fn addCMakeStep(b: *std.Build, opt: cmake.CMakeStep.Options) *cmake.CMakeStep {
     const this_dep = b.dependencyFromBuildZig(meta_allyourcode, .{
         .dependency = .cmake,
+        .global_cache = opt.global_cache,
     });
+    if (opt.global_cache) this_dep.builder.cache_root = b.graph.global_cache_root;
     if (opt.toolchain == null) {
+
         const tc = cmake.Toolchain.zigBuildDefaults(this_dep.builder, .{});
         tc.CMAKE = this_dep.namedWriteFiles("cmake").getDirectory().path(this_dep.builder, "bin/cmake");
         if (this_dep.builder.lazyDependency("gnumake", .{
             .target = b.graph.host,
         })) |gnumake| {
+            if (opt.global_cache) gnumake.builder.cache_root = b.graph.global_cache_root;
             const gnumake_exe = gnumake.artifact("make");
             tc.MAKE = gnumake_exe.getEmittedBin();
         }
@@ -138,6 +142,9 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
         .target = cmake_stage1_target,
         .optimize = defaults.optimize,
     })) |dep| {
+        if (b.option(bool, "global_cache", "set cache to zig global cache dir") orelse false) {
+            dep.builder.cache_root = b.graph.global_cache_root;
+        }
         cmake.build(dep.builder);
         const stage1_step = b.step("cmake-stage1", "build the cmake stage1 exe");
         inline for (.{ "cmake", "uv" }) |f| {

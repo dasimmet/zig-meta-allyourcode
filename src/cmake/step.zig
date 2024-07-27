@@ -19,6 +19,7 @@ pub const Options = struct {
     verbose: ?bool = null,
     makeflags: []const u8 = "",
     defines: []const struct { []const u8, []const u8 } = &.{},
+    global_cache: bool = false,
 };
 
 pub fn init(b: *std.Build, opt: Options) *CmakeStep {
