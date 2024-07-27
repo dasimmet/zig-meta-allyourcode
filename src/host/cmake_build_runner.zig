@@ -11,6 +11,7 @@ pub fn main() !void {
     var gen_args = std.ArrayList([]const u8).init(arena.allocator());
     var build_args = std.ArrayList([]const u8).init(arena.allocator());
     var build_dir: []const u8 = undefined;
+    var install_dir: []const u8 = undefined;
     var p_args = std.process.args();
     var i: usize = 0;
     var arg0: []const u8 = undefined;
@@ -31,6 +32,14 @@ pub fn main() !void {
             try gen_args.append(gen_dir_arg);
             try build_args.append("-C");
             try build_args.append(arg);
+        } else if (i == 4) { // path to install dir
+            install_dir = arg;
+            const install_dir_arg = try std.mem.join(
+                allocator,
+                "",
+                &.{ "-DCMAKE_INSTALL_PREFIX=", arg },
+            );
+            try gen_args.append(install_dir_arg);
         } else if (std.mem.startsWith(u8, arg, "@CM:")) {
             try gen_args.append(arg[4..]);
         } else if (std.mem.startsWith(u8, arg, "@GM:")) {
@@ -45,6 +54,14 @@ pub fn main() !void {
             return error.UnknownArgument;
         }
     }
+    if (i < 4) return error.NotEnoughArguments;
+    const done_file = try std.fs.path.join(allocator, &.{
+        std.fs.path.dirname(install_dir).?,
+        "done",
+    });
+    if (std.fs.accessAbsolute(done_file, .{})) {
+        return;
+    } else |_| {}
 
     if (builtin.mode == .Debug or builtin.mode == .ReleaseSafe) {
         try stderr.writer().print("cmake cmd: ", .{});
@@ -58,14 +75,16 @@ pub fn main() !void {
         try stderr.writer().print("\n", .{});
     }
 
-    try callChild(gen_args.items, arena.allocator());
-    try callChild(build_args.items, arena.allocator());
-    const env = try std.process.getEnvMap(arena.allocator());
+    try callChild(gen_args.items, allocator);
+    try callChild(build_args.items, allocator);
+    const env = try std.process.getEnvMap(allocator);
     if (env.get("ZIG_CMAKE_REMOVE_BUILD_DIR")) |env_v| {
         if (std.mem.eql(u8, env_v, "1")) {
             try std.fs.deleteTreeAbsolute(build_dir);
         }
     }
+    var done_fd = try std.fs.createFileAbsolute(done_file, .{});
+    done_fd.close();
 }
 
 fn callChild(args: []const []const u8, arena: std.mem.Allocator) !void {
