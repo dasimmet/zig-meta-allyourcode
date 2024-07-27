@@ -61,7 +61,7 @@ pub fn main() !void {
     try callChild(gen_args.items, arena.allocator());
     try callChild(build_args.items, arena.allocator());
     const env = try std.process.getEnvMap(arena.allocator());
-    if (env.get("ZIG_CMAKE_RELEASE_BUILD")) |env_v| {
+    if (env.get("ZIG_CMAKE_REMOVE_BUILD_DIR")) |env_v| {
         if (std.mem.eql(u8, env_v, "1")) {
             try std.fs.deleteTreeAbsolute(build_dir);
         }
