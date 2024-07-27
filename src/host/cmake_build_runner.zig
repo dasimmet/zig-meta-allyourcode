@@ -10,6 +10,7 @@ pub fn main() !void {
     const allocator = arena.allocator();
     var gen_args = std.ArrayList([]const u8).init(arena.allocator());
     var build_args = std.ArrayList([]const u8).init(arena.allocator());
+    var build_dir: []const u8 = undefined;
     var p_args = std.process.args();
     var i: usize = 0;
     var arg0: []const u8 = undefined;
@@ -21,12 +22,13 @@ pub fn main() !void {
         } else if (i == 2) { // path to GMAKE
             try build_args.append(arg);
         } else if (i == 3) { // path to build dir
-            const gen_dir = try std.mem.join(
+            build_dir = arg;
+            const gen_dir_arg = try std.mem.join(
                 allocator,
                 "",
                 &.{ "-B", arg },
             );
-            try gen_args.append(gen_dir);
+            try gen_args.append(gen_dir_arg);
             try build_args.append("-C");
             try build_args.append(arg);
         } else if (std.mem.startsWith(u8, arg, "@CM:")) {
@@ -58,6 +60,12 @@ pub fn main() !void {
 
     try callChild(gen_args.items, arena.allocator());
     try callChild(build_args.items, arena.allocator());
+    const env = try std.process.getEnvMap(arena.allocator());
+    if (env.get("ZIG_CMAKE_RELEASE_BUILD")) |env_v| {
+        if (std.mem.eql(u8, env_v, "1")) {
+            try std.fs.deleteTreeAbsolute(build_dir);
+        }
+    }
 }
 
 fn callChild(args: []const []const u8, arena: std.mem.Allocator) !void {

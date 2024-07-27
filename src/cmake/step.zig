@@ -12,14 +12,15 @@ run: *Step.Run,
 toolchain: *Toolchain,
 
 pub const Options = struct {
-    target: ?std.Build.ResolvedTarget,
-    name: []const u8,
-    source_dir: LazyPath,
-    toolchain: ?*Toolchain = null,
-    verbose: ?bool = null,
-    makeflags: []const u8 = "",
     defines: []const struct { []const u8, []const u8 } = &.{},
     global_cache: bool = false,
+    makeflags: []const u8 = "",
+    name: []const u8,
+    remove_build: bool = false,
+    source_dir: LazyPath,
+    target: ?std.Build.ResolvedTarget,
+    toolchain: ?*Toolchain = null,
+    verbose: ?bool = null,
 };
 
 pub fn init(b: *std.Build, opt: Options) *CmakeStep {
@@ -41,6 +42,7 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const bs_run = std.Build.Step.Run.create(b, opt.name);
     const self = b.allocator.create(CmakeStep) catch @panic("OOM");
     bs_run.addFileArg(tc.CMAKE_BUILD_RUNNER);
+    bs_run.setEnvironmentVariable("ZIG_CMAKE_REMOVE_BUILD", if (opt.remove_build) "1" else "0");
     bs_run.setEnvironmentVariable("ZIG_EXE", tc.ZIG_EXE);
     bs_run.setEnvironmentVariable("MAKEFLAGS", makeflags);
     if (opt.verbose) |verbose| {

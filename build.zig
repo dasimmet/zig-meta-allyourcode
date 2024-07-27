@@ -78,6 +78,8 @@ pub fn addCMakeStep(b: *std.Build, opt: cmake.CMakeStep.Options) *cmake.CMakeSte
             .toolchain = tc,
             .verbose = opt.verbose,
             .defines = opt.defines,
+            .global_cache = opt.global_cache,
+            .remove_build = opt.remove_build,
         });
     }
 
@@ -144,6 +146,7 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
     })) |dep| {
         if (b.option(bool, "global_cache", "set cache to zig global cache dir") orelse false) {
             dep.builder.cache_root = b.graph.global_cache_root;
+            b.cache_root = b.graph.global_cache_root;
         }
         cmake.build(dep.builder);
         const stage1_step = b.step("cmake-stage1", "build the cmake stage1 exe");

@@ -74,6 +74,7 @@ pub fn stage2(b: *std.Build, tc: *Toolchain, target: std.Build.ResolvedTarget) *
         .toolchain = tc,
         .name = "cmake_stage2",
         .source_dir = b.path(""),
+        .remove_build = true,
     });
 
     inline for (.{
