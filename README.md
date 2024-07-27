@@ -37,10 +37,11 @@ pub fn build() void {
 ## Ideas for integration
 
 - cmake (including custom build step?)
-  - ✅ stage1
+  - ✅ stage1 linux
   - ✅ running bootstrap `cmake` to reconfigure itself with `CC=zig cc`
   - ✅ use zig built `make` to rebuild `cmake`
-  - 🏃‍♂️ fix any cacheing issues
+  - 🏃‍♂️ stage1 windows
+  - 🏃‍♂️ stage1 macos
   - 🏃‍♂️test building other cmake projects
   - try to link cmake fully static
   - test other architectures
