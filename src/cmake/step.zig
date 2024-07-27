@@ -42,7 +42,7 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     const bs_run = std.Build.Step.Run.create(b, opt.name);
     const self = b.allocator.create(CmakeStep) catch @panic("OOM");
     bs_run.addFileArg(tc.CMAKE_BUILD_RUNNER);
-    bs_run.setEnvironmentVariable("ZIG_CMAKE_REMOVE_BUILD", if (opt.remove_build) "1" else "0");
+    bs_run.setEnvironmentVariable("ZIG_CMAKE_REMOVE_BUILD_DIR", if (opt.remove_build) "1" else "0");
     bs_run.setEnvironmentVariable("ZIG_EXE", tc.ZIG_EXE);
     bs_run.setEnvironmentVariable("MAKEFLAGS", makeflags);
     if (opt.verbose) |verbose| {
