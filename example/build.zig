@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     })) |sqlite3_dep| {
         if (meta_import) |meta_allyourcode| {
-            const cmakeStep = meta_allyourcode.addCMakeStep(b, .{
+            const cmake_sqlite3_step = meta_allyourcode.addCMakeStep(b, .{
                 .target = target,
                 .name = "cmake sqlite3",
                 .source_dir = sqlite3_dep.path(""),
@@ -29,7 +29,7 @@ pub fn build(b: *std.Build) void {
                     .{ "CMAKE_BUILD_TYPE", if (optimize == .Debug) "Debug" else "Release" },
                 },
             });
-            const sqlite3_install = cmakeStep.install(b, "");
+            const sqlite3_install = cmake_sqlite3_step.install(b, "");
             b.getInstallStep().dependOn(&sqlite3_install.step);
         }
     }
