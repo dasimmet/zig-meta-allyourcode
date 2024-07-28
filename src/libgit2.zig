@@ -4,20 +4,7 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const git2_exe = b.addExecutable(.{
-        .name = "git2",
-        .target = target,
-        .optimize = optimize,
-    });
-    inline for (git2_include_paths) |inc| {
-        git2_exe.addIncludePath(b.path(inc));
-    }
-    git2_exe.linkLibC();
-    git2_exe.addCSourceFiles(.{
-        .files = &git2_cli_files,
-        .root = b.path("src/cli"),
-        .flags = &common_flags,
-    });
+    const git2_exe = git2_cli.build(b, target, optimize);
     b.installArtifact(git2_exe);
 
     const libgit2 = b.addStaticLibrary(.{
@@ -63,35 +50,14 @@ pub fn build(b: *std.Build) void {
         .style = .{ .cmake = b.path("src/util/git2_features.h.in") },
     }, target_header_config(target));
     libgit2.addIncludePath(features_h.getOutput().dirname());
+    libgit2.addIncludePath(features_h.getOutput().dirname());
     git2_exe.addIncludePath(features_h.getOutput().dirname());
 
-    const git2_util = b.addStaticLibrary(.{
-        .name = "git2_util",
-        .target = target,
-        .optimize = optimize,
-    });
-    {
-        git2_util.linkLibC();
-        git2_util.addCSourceFiles(.{
-            .files = &git2_util_files,
-            .root = b.path("src/util"),
-            .flags = &common_flags,
-        });
-        inline for (macros) |macro| {
-            git2_util.defineCMacro(macro[0], macro[1]);
-        }
-        git2_util.addIncludePath(features_h.getOutput().dirname());
-        inline for (git2_include_paths) |inc| {
-            git2_util.addIncludePath(b.path(inc));
-        }
-        if (!target.result.isWasm()) {
-            inline for (cli_system_libs) |lib| {
-                git2_util.linkSystemLibrary(lib);
-            }
-        }
-        libgit2.linkLibrary(git2_util);
-        b.installArtifact(git2_util);
-    }
+    const git2_util_lib = git2_util.build(b, target, optimize);
+    git2_util_lib.addIncludePath(features_h.getOutput().dirname());
+    libgit2.linkLibrary(git2_util_lib);
+    b.installArtifact(git2_util_lib);
+
     const pcre = b.addStaticLibrary(.{
         .name = "pcre",
         .target = target,
@@ -229,7 +195,7 @@ pub const header_config = .{
     .HAVE_SYS_TYPES_H = "1",
     .HAVE_UNISTD_H = 1,
     .HAVE_UNSIGNED_LONG_LONG = 1,
-    .LINK_WITH_STATIC_LIBRARIES =  1,
+    .LINK_WITH_STATIC_LIBRARIES = 1,
     .NEWLINE = 10,
     .NO_RECURSE = 1,
     .pcre_have_long_long = 1,
@@ -266,43 +232,80 @@ pub const git2_include_paths = .{
     // "include/git2", DO NOT INCLUDE THIS IT WILL RUIN STDLIB INCLUDES
 };
 
-pub const git2_util_files = .{
-    "alloc.c",
-    "allocators/failalloc.c",
-    "allocators/stdalloc.c",
-    "allocators/win32_leakcheck.c",
-    "date.c",
-    "errors.c",
-    "filebuf.c",
-    "fs_path.c",
-    "futils.c",
-    "hash.c",
-    "net.c",
-    "pool.c",
-    "posix.c",
-    "pqueue.c",
-    "rand.c",
-    "regexp.c",
-    "runtime.c",
-    "sortedcache.c",
-    "str.c",
-    "strlist.c",
-    "strmap.c",
-    "thread.c",
-    "tsort.c",
-    "utf8.c",
-    "util.c",
-    "varint.c",
-    "vector.c",
-    "wildmatch.c",
-    "zstream.c",
-    "unix/map.c",
-    "unix/process.c",
-    "unix/realpath.c",
-    "hash/collisiondetect.c",
-    "hash/sha1dc/sha1.c",
-    "hash/sha1dc/ubc_check.c",
-    "hash/openssl.c",
+pub const git2_util = struct {
+    pub fn build(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Step.Compile {
+        const git2_util_lib = b.addStaticLibrary(.{
+            .name = "git2_util",
+            .target = target,
+            .optimize = optimize,
+        });
+        git2_util_lib.linkLibC();
+        git2_util_lib.addCSourceFiles(.{
+            .files = &common_files,
+            .root = b.path(files_prefix),
+            .flags = &common_flags,
+        });
+        if (target.result.os.tag != .windows) {
+            git2_util_lib.addCSourceFiles(.{
+                .files = &unix_files,
+                .root = b.path(files_prefix),
+                .flags = &common_flags,
+            });
+        }
+        inline for (macros) |macro| {
+            git2_util_lib.defineCMacro(macro[0], macro[1]);
+        }
+        inline for (git2_include_paths) |inc| {
+            git2_util_lib.addIncludePath(b.path(inc));
+        }
+        if (!target.result.isWasm()) {
+            inline for (cli_system_libs) |lib| {
+                git2_util_lib.linkSystemLibrary(lib);
+            }
+        }
+        return git2_util_lib;
+    }
+    const files_prefix = "src/util";
+    const common_files = .{
+        "alloc.c",
+        "allocators/failalloc.c",
+        "allocators/stdalloc.c",
+        "allocators/win32_leakcheck.c",
+        "date.c",
+        "errors.c",
+        "filebuf.c",
+        "fs_path.c",
+        "futils.c",
+        "hash.c",
+        "net.c",
+        "pool.c",
+        "posix.c",
+        "pqueue.c",
+        "rand.c",
+        "regexp.c",
+        "runtime.c",
+        "sortedcache.c",
+        "str.c",
+        "strlist.c",
+        "strmap.c",
+        "thread.c",
+        "tsort.c",
+        "utf8.c",
+        "util.c",
+        "varint.c",
+        "vector.c",
+        "wildmatch.c",
+        "zstream.c",
+        "hash/collisiondetect.c",
+        "hash/sha1dc/sha1.c",
+        "hash/sha1dc/ubc_check.c",
+        "hash/openssl.c",
+    };
+    const unix_files = .{
+        "unix/map.c",
+        "unix/process.c",
+        "unix/realpath.c",
+    };
 };
 
 const llhttp_files = .{
@@ -488,20 +491,49 @@ const libgit2_files = .{
     "worktree.c",
 };
 
-const git2_cli_files = .{
-    "cmd.c",
-    "cmd_cat_file.c",
-    "cmd_clone.c",
-    "cmd_config.c",
-    "cmd_hash_object.c",
-    "cmd_help.c",
-    "cmd_index_pack.c",
-    "common.c",
-    "main.c",
-    "opt.c",
-    "opt_usage.c",
-    "progress.c",
-    "unix/sighandler.c",
+const git2_cli = struct {
+    pub fn build(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Step.Compile {
+        const git2_exe = b.addExecutable(.{
+            .name = "git2",
+            .target = target,
+            .optimize = optimize,
+        });
+        inline for (git2_include_paths) |inc| {
+            git2_exe.addIncludePath(b.path(inc));
+        }
+        git2_exe.linkLibC();
+        git2_exe.addCSourceFiles(.{
+            .files = &common_files,
+            .root = b.path(files_prefix),
+            .flags = &common_flags,
+        });
+        if (target.result.os.tag != .windows) {
+            git2_exe.addCSourceFiles(.{
+                .files = &unix_files,
+                .root = b.path(files_prefix),
+                .flags = &common_flags,
+            });
+        }
+        return git2_exe;
+    }
+    const files_prefix = "src/cli";
+    const common_files = .{
+        "cmd.c",
+        "cmd_cat_file.c",
+        "cmd_clone.c",
+        "cmd_config.c",
+        "cmd_hash_object.c",
+        "cmd_help.c",
+        "cmd_index_pack.c",
+        "common.c",
+        "main.c",
+        "opt.c",
+        "opt_usage.c",
+        "progress.c",
+    };
+    const unix_files = .{
+        "unix/sighandler.c",
+    };
 };
 
 pub fn dir_src(b: *std.Build, dir: []const u8, suffix: []const u8) [][]const u8 {
