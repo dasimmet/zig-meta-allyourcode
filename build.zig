@@ -101,12 +101,13 @@ fn addLibGitBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
     if (b.lazyDependency("libgit2", defaults)) |dep| {
         libgit2.build(dep.builder);
         const git2_step = b.step("git2", "build the git2 exe");
-        inline for (.{ "git2", "libgit2", "git2_util", "pcre" }) |f| {
+        inline for (.{ "git2", "libgit2", "pcre", "git2_util", "xdiff" }) |f| {
             const git2_art = b.addInstallArtifact(
                 dep.artifact(f),
                 .{},
             );
             git2_step.dependOn(&git2_art.step);
+            b.step("libgit2_"++f, "").dependOn(&git2_art.step);
         }
         b.getInstallStep().dependOn(git2_step);
     }

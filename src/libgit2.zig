@@ -1,4 +1,6 @@
 const std = @import("std");
+const pcre = @import("libgit2/pcre.zig");
+const git2_util = @import("libgit2/git2_util.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -7,100 +9,35 @@ pub fn build(b: *std.Build) void {
     const git2_exe = git2_cli.build(b, target, optimize);
     b.installArtifact(git2_exe);
 
-    const libgit2 = b.addStaticLibrary(.{
-        .name = "libgit2",
-        .target = target,
-        .optimize = optimize,
-    });
-    git2_exe.linkLibrary(libgit2);
-    libgit2.linkLibC();
-
-    inline for (macros) |macro| {
-        libgit2.defineCMacro(macro[0], macro[1]);
-    }
-
-    inline for (git2_include_paths) |inc| {
-        libgit2.addIncludePath(b.path(inc));
-    }
-    if (!target.result.isWasm()) {
-        inline for (cli_system_libs) |lib| {
-            libgit2.linkSystemLibrary(lib);
-        }
-    }
-
-    libgit2.addCSourceFiles(.{
-        .files = &llhttp_files,
-        .root = b.path("deps/llhttp"),
-        .flags = &common_flags,
-    });
-    libgit2.addCSourceFiles(.{
-        .files = &ntlmclient_files,
-        .root = b.path("deps/ntlmclient"),
-        .flags = &common_flags,
-    });
-    libgit2.addCSourceFiles(.{
-        .files = &libgit2_files,
-        .root = b.path("src/libgit2"),
-        .flags = &common_flags,
-    });
-    b.installArtifact(libgit2);
-
     const features_h = b.addConfigHeader(.{
         .include_path = "configheader/git2_features.h",
         .style = .{ .cmake = b.path("src/util/git2_features.h.in") },
     }, target_header_config(target));
-    libgit2.addIncludePath(features_h.getOutput().dirname());
-    libgit2.addIncludePath(features_h.getOutput().dirname());
     git2_exe.addIncludePath(features_h.getOutput().dirname());
 
-    const git2_util_lib = git2_util.build(b, target, optimize);
-    git2_util_lib.addIncludePath(features_h.getOutput().dirname());
-    libgit2.linkLibrary(git2_util_lib);
-    b.installArtifact(git2_util_lib);
-
-    const pcre = b.addStaticLibrary(.{
-        .name = "pcre",
-        .target = target,
-        .optimize = optimize,
-    });
     {
-        const pcre_config_h = b.addConfigHeader(.{
-            .include_path = "configheader/config.h",
-            .style = .{ .cmake = b.path("deps/pcre/config.h.in") },
-        }, target_header_config(target));
-        pcre.addIncludePath(pcre_config_h.getOutput().dirname());
-        pcre.addCSourceFiles(.{
-            .files = &pcre_files,
-            .root = b.path("deps/pcre"),
-            .flags = &common_flags,
-        });
-        pcre.linkLibC();
-        inline for (macros) |macro| {
-            pcre.defineCMacro(macro[0], macro[1]);
-        }
-        pcre.addIncludePath(pcre_config_h.getOutput().dirname());
-        libgit2.linkLibrary(pcre);
-        b.installArtifact(pcre);
-    }
+        const libgit2 = LibGIT2.build(b, target, optimize);
+        libgit2.addIncludePath(features_h.getOutput().dirname());
+        git2_exe.linkLibrary(libgit2);
+        b.installArtifact(libgit2);
 
-    {
-        const xdiff = b.addStaticLibrary(.{
-            .name = "xdiff",
-            .target = target,
-            .optimize = optimize,
-        });
-        xdiff.linkLibC();
-        xdiff.addCSourceFiles(.{
-            .files = &xdiff_files,
-            .root = b.path("deps/xdiff"),
-            .flags = &common_flags,
-        });
-        xdiff.addIncludePath(b.path("deps/pcre"));
-        xdiff.addIncludePath(b.path("src/util"));
-        xdiff.addIncludePath(b.path("include"));
-        xdiff.addIncludePath(features_h.getOutput().dirname());
-        libgit2.linkLibrary(xdiff);
-        b.installArtifact(xdiff);
+        const git2_util_lib = git2_util.build(b, target, optimize);
+        git2_util_lib.addIncludePath(features_h.getOutput().dirname());
+        b.installArtifact(git2_util_lib);
+        libgit2.linkLibrary(git2_util_lib);
+
+        const pcre_lib = pcre.build(b, target, optimize);
+        b.installArtifact(pcre_lib);
+        libgit2.linkLibrary(pcre_lib);
+        libgit2.addIncludePath(b.path(pcre.include_path));
+
+        const xdiff_lib = xdiff.build(b, target, optimize);
+        xdiff_lib.addIncludePath(features_h.getOutput().dirname());
+        xdiff_lib.linkLibrary(pcre_lib);
+        xdiff_lib.addIncludePath(b.path(pcre.include_path));
+
+        b.installArtifact(xdiff_lib);
+        libgit2.linkLibrary(xdiff_lib);
     }
 }
 
@@ -117,8 +54,11 @@ pub const macros = .{
 };
 
 pub const common_flags = .{
-    // "-Wall",
-    // "-Wextra",
+    "-D_DEBUG",
+    "-D_GNU_SOURCE",
+    "-fPIC",
+    "-fvisibility=hidden",
+    "-g",
     "-Wformat-security",
     "-Wformat",
     "-Wno-bad-function-cast",
@@ -127,9 +67,15 @@ pub const common_flags = .{
     "-Wno-sign-compare",
     "-Wno-unused-but-set-variable",
     "-Wunused",
+    // "-O0",
+    // "-pedantic-errors",
+    // "-pedantic",
+    // "-std=c90",
+    // "-Wall",
     // "-Wc99-c11-compat",
     // "-Wdeclaration-after-statement",
     // "-Werror",
+    // "-Wextra",
     // "-Wmissing-declarations",
     // "-Wno-documentation-deprecated-sync",
     // "-Wno-int-conversion",
@@ -138,15 +84,6 @@ pub const common_flags = .{
     // "-Wstrict-aliasing",
     // "-Wstrict-prototypes",
     // "-Wunused-function",
-    "-D_DEBUG",
-    "-D_GNU_SOURCE",
-    "-fPIC",
-    "-fvisibility=hidden",
-    "-g",
-    // "-pedantic-errors",
-    // "-pedantic",
-    // "-O0",
-    // "-std=c90",
 };
 
 pub fn target_header_config(t: std.Build.ResolvedTarget) @TypeOf(header_config) {
@@ -210,7 +147,7 @@ pub const header_config = .{
     .SUPPORT_PCRE8 = 1,
 };
 
-pub const cli_system_libs = .{
+pub const system_libs = .{
     // "gssapi_krb5",
     // "krb5",
     // "k5crypto",
@@ -220,275 +157,242 @@ pub const cli_system_libs = .{
     "z",
 };
 
-pub const git2_include_paths = .{
-    "include",
-    "src/util",
-    "deps/llhttp",
-    "deps/pcre",
-    "deps/xdiff",
-    "deps/ntlmclient",
-    "src/libgit2",
-    "src/cli",
-    // "include/git2", DO NOT INCLUDE THIS IT WILL RUIN STDLIB INCLUDES
-};
-
-pub const git2_util = struct {
+const xdiff = struct {
     pub fn build(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Step.Compile {
-        const git2_util_lib = b.addStaticLibrary(.{
-            .name = "git2_util",
+        const xdiff_lib = b.addStaticLibrary(.{
+            .name = "xdiff",
             .target = target,
             .optimize = optimize,
         });
-        git2_util_lib.linkLibC();
-        git2_util_lib.addCSourceFiles(.{
-            .files = &common_files,
+        xdiff_lib.linkLibC();
+        xdiff_lib.addCSourceFiles(.{
+            .files = &files,
             .root = b.path(files_prefix),
             .flags = &common_flags,
         });
-        if (target.result.os.tag != .windows) {
-            git2_util_lib.addCSourceFiles(.{
-                .files = &unix_files,
-                .root = b.path(files_prefix),
-                .flags = &common_flags,
-            });
+        inline for (include_paths) |inc| {
+            xdiff_lib.addIncludePath(b.path(inc));
         }
+        return xdiff_lib;
+    }
+    const include_paths = .{
+        "include",
+        git2_util.files_prefix,
+    };
+    const files_prefix = "deps/xdiff";
+    const files = .{
+        "xdiffi.c",
+        "xemit.c",
+        "xhistogram.c",
+        "xmerge.c",
+        "xpatience.c",
+        "xprepare.c",
+        "xutils.c",
+    };
+};
+
+const LibGIT2 = struct {
+    pub fn build(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Step.Compile {
+        const libgit2 = b.addStaticLibrary(.{
+            .name = "libgit2",
+            .target = target,
+            .optimize = optimize,
+        });
+        libgit2.linkLibC();
+
         inline for (macros) |macro| {
-            git2_util_lib.defineCMacro(macro[0], macro[1]);
+            libgit2.defineCMacro(macro[0], macro[1]);
         }
-        inline for (git2_include_paths) |inc| {
-            git2_util_lib.addIncludePath(b.path(inc));
+
+        inline for (include_paths) |inc| {
+            libgit2.addIncludePath(b.path(inc));
         }
         if (!target.result.isWasm()) {
-            inline for (cli_system_libs) |lib| {
-                git2_util_lib.linkSystemLibrary(lib);
+            inline for (system_libs) |lib| {
+                libgit2.linkSystemLibrary(lib);
             }
         }
-        return git2_util_lib;
+
+        libgit2.addCSourceFiles(.{
+            .files = &llhttp_files,
+            .root = b.path(llhttp_prefix),
+            .flags = &common_flags,
+        });
+        libgit2.addCSourceFiles(.{
+            .files = &ntlmclient_files,
+            .root = b.path(ntlmclient_prefix),
+            .flags = &common_flags,
+        });
+        libgit2.addCSourceFiles(.{
+            .files = &libgit2_files,
+            .root = b.path(files_prefix),
+            .flags = &common_flags,
+        });
+        return libgit2;
     }
-    const files_prefix = "src/util";
-    const common_files = .{
-        "alloc.c",
-        "allocators/failalloc.c",
-        "allocators/stdalloc.c",
-        "allocators/win32_leakcheck.c",
-        "date.c",
-        "errors.c",
-        "filebuf.c",
-        "fs_path.c",
-        "futils.c",
-        "hash.c",
-        "net.c",
-        "pool.c",
-        "posix.c",
-        "pqueue.c",
-        "rand.c",
-        "regexp.c",
-        "runtime.c",
-        "sortedcache.c",
-        "str.c",
-        "strlist.c",
-        "strmap.c",
-        "thread.c",
-        "tsort.c",
-        "utf8.c",
+
+    pub const include_paths = .{
+        "include",
+        files_prefix,
+        git2_cli.files_prefix,
+        git2_util.files_prefix,
+        llhttp_prefix,
+        ntlmclient_prefix,
+        pcre.include_path,
+        xdiff.files_prefix,
+        // "include/git2", DO NOT INCLUDE THIS IT WILL RUIN STDLIB INCLUDES
+    };
+    const files_prefix = "src/libgit2";
+    const libgit2_files = .{
+        "annotated_commit.c",
+        "apply.c",
+        "attr.c",
+        "attr_file.c",
+        "attrcache.c",
+        "blame.c",
+        "blame_git.c",
+        "blob.c",
+        "branch.c",
+        "buf.c",
+        "cache.c",
+        "checkout.c",
+        "cherrypick.c",
+        "clone.c",
+        "commit.c",
+        "commit_graph.c",
+        "commit_list.c",
+        "config.c",
+        "config_cache.c",
+        "config_file.c",
+        "config_list.c",
+        "config_mem.c",
+        "config_parse.c",
+        "config_snapshot.c",
+        "crlf.c",
+        "delta.c",
+        "describe.c",
+        "diff.c",
+        "diff_driver.c",
+        "diff_file.c",
+        "diff_generate.c",
+        "diff_parse.c",
+        "diff_print.c",
+        "diff_stats.c",
+        "diff_tform.c",
+        "diff_xdiff.c",
+        "email.c",
+        "fetch.c",
+        "fetchhead.c",
+        "filter.c",
+        "grafts.c",
+        "graph.c",
+        "hashsig.c",
+        "ident.c",
+        "idxmap.c",
+        "ignore.c",
+        "index.c",
+        "indexer.c",
+        "iterator.c",
+        "libgit2.c",
+        "mailmap.c",
+        "merge.c",
+        "merge_driver.c",
+        "merge_file.c",
+        "message.c",
+        "midx.c",
+        "mwindow.c",
+        "notes.c",
+        "object.c",
+        "object_api.c",
+        "odb.c",
+        "odb_loose.c",
+        "odb_mempack.c",
+        "odb_pack.c",
+        "offmap.c",
+        "oid.c",
+        "oidarray.c",
+        "oidmap.c",
+        "pack-objects.c",
+        "pack.c",
+        "parse.c",
+        "patch.c",
+        "patch_generate.c",
+        "patch_parse.c",
+        "path.c",
+        "pathspec.c",
+        "proxy.c",
+        "push.c",
+        "reader.c",
+        "rebase.c",
+        "refdb.c",
+        "refdb_fs.c",
+        "reflog.c",
+        "refs.c",
+        "refspec.c",
+        "remote.c",
+        "repository.c",
+        "reset.c",
+        "revert.c",
+        "revparse.c",
+        "revwalk.c",
+        "settings.c",
+        "signature.c",
+        "stash.c",
+        "status.c",
+        "strarray.c",
+        "streams/mbedtls.c",
+        "streams/openssl.c",
+        "streams/openssl_dynamic.c",
+        "streams/openssl_legacy.c",
+        "streams/registry.c",
+        "streams/schannel.c",
+        "streams/socket.c",
+        "streams/stransport.c",
+        "streams/tls.c",
+        "submodule.c",
+        "sysdir.c",
+        "tag.c",
+        "trace.c",
+        "trailer.c",
+        "transaction.c",
+        "transport.c",
+        "transports/auth.c",
+        "transports/auth_gssapi.c",
+        "transports/auth_ntlmclient.c",
+        "transports/auth_sspi.c",
+        "transports/credential.c",
+        "transports/credential_helpers.c",
+        "transports/git.c",
+        "transports/http.c",
+        "transports/httpclient.c",
+        "transports/httpparser.c",
+        "transports/local.c",
+        "transports/smart.c",
+        "transports/smart_pkt.c",
+        "transports/smart_protocol.c",
+        "transports/ssh.c",
+        "transports/ssh_exec.c",
+        "transports/ssh_libssh2.c",
+        "transports/winhttp.c",
+        "tree-cache.c",
+        "tree.c",
+        "worktree.c",
+    };
+
+    const ntlmclient_prefix = "deps/ntlmclient";
+    const ntlmclient_files = .{
+        "ntlm.c",
         "util.c",
-        "varint.c",
-        "vector.c",
-        "wildmatch.c",
-        "zstream.c",
-        "hash/collisiondetect.c",
-        "hash/sha1dc/sha1.c",
-        "hash/sha1dc/ubc_check.c",
-        "hash/openssl.c",
+        "unicode_builtin.c",
+        "crypt_openssl.c",
     };
-    const unix_files = .{
-        "unix/map.c",
-        "unix/process.c",
-        "unix/realpath.c",
+
+    const llhttp_prefix = "deps/llhttp";
+    const llhttp_files = .{
+        "api.c",
+        "http.c",
+        "llhttp.c",
     };
-};
-
-const llhttp_files = .{
-    "api.c",
-    "http.c",
-    "llhttp.c",
-};
-
-const ntlmclient_files = .{
-    "ntlm.c",
-    "util.c",
-    "unicode_builtin.c",
-    "crypt_openssl.c",
-};
-
-const xdiff_files = .{
-    "xdiffi.c",
-    "xemit.c",
-    "xhistogram.c",
-    "xmerge.c",
-    "xpatience.c",
-    "xprepare.c",
-    "xutils.c",
-};
-
-const pcre_files = .{
-    "pcre_byte_order.c",
-    "pcre_chartables.c",
-    "pcre_compile.c",
-    "pcre_config.c",
-    "pcre_dfa_exec.c",
-    "pcre_exec.c",
-    "pcre_fullinfo.c",
-    "pcre_get.c",
-    "pcre_globals.c",
-    "pcre_jit_compile.c",
-    "pcre_maketables.c",
-    "pcre_newline.c",
-    "pcre_ord2utf8.c",
-    "pcre_refcount.c",
-    "pcre_string_utils.c",
-    "pcre_study.c",
-    "pcre_tables.c",
-    "pcre_ucd.c",
-    "pcre_valid_utf8.c",
-    "pcre_version.c",
-    "pcre_xclass.c",
-    "pcreposix.c",
-};
-const libgit2_files = .{
-    "annotated_commit.c",
-    "apply.c",
-    "attr.c",
-    "attr_file.c",
-    "attrcache.c",
-    "blame.c",
-    "blame_git.c",
-    "blob.c",
-    "branch.c",
-    "buf.c",
-    "cache.c",
-    "checkout.c",
-    "cherrypick.c",
-    "clone.c",
-    "commit.c",
-    "commit_graph.c",
-    "commit_list.c",
-    "config.c",
-    "config_cache.c",
-    "config_file.c",
-    "config_list.c",
-    "config_mem.c",
-    "config_parse.c",
-    "config_snapshot.c",
-    "crlf.c",
-    "delta.c",
-    "describe.c",
-    "diff.c",
-    "diff_driver.c",
-    "diff_file.c",
-    "diff_generate.c",
-    "diff_parse.c",
-    "diff_print.c",
-    "diff_stats.c",
-    "diff_tform.c",
-    "diff_xdiff.c",
-    "email.c",
-    "fetch.c",
-    "fetchhead.c",
-    "filter.c",
-    "grafts.c",
-    "graph.c",
-    "hashsig.c",
-    "ident.c",
-    "idxmap.c",
-    "ignore.c",
-    "index.c",
-    "indexer.c",
-    "iterator.c",
-    "libgit2.c",
-    "mailmap.c",
-    "merge.c",
-    "merge_driver.c",
-    "merge_file.c",
-    "message.c",
-    "midx.c",
-    "mwindow.c",
-    "notes.c",
-    "object.c",
-    "object_api.c",
-    "odb.c",
-    "odb_loose.c",
-    "odb_mempack.c",
-    "odb_pack.c",
-    "offmap.c",
-    "oid.c",
-    "oidarray.c",
-    "oidmap.c",
-    "pack-objects.c",
-    "pack.c",
-    "parse.c",
-    "patch.c",
-    "patch_generate.c",
-    "patch_parse.c",
-    "path.c",
-    "pathspec.c",
-    "proxy.c",
-    "push.c",
-    "reader.c",
-    "rebase.c",
-    "refdb.c",
-    "refdb_fs.c",
-    "reflog.c",
-    "refs.c",
-    "refspec.c",
-    "remote.c",
-    "repository.c",
-    "reset.c",
-    "revert.c",
-    "revparse.c",
-    "revwalk.c",
-    "settings.c",
-    "signature.c",
-    "stash.c",
-    "status.c",
-    "strarray.c",
-    "streams/mbedtls.c",
-    "streams/openssl.c",
-    "streams/openssl_dynamic.c",
-    "streams/openssl_legacy.c",
-    "streams/registry.c",
-    "streams/schannel.c",
-    "streams/socket.c",
-    "streams/stransport.c",
-    "streams/tls.c",
-    "submodule.c",
-    "sysdir.c",
-    "tag.c",
-    "trace.c",
-    "trailer.c",
-    "transaction.c",
-    "transport.c",
-    "transports/auth.c",
-    "transports/auth_gssapi.c",
-    "transports/auth_ntlmclient.c",
-    "transports/auth_sspi.c",
-    "transports/credential.c",
-    "transports/credential_helpers.c",
-    "transports/git.c",
-    "transports/http.c",
-    "transports/httpclient.c",
-    "transports/httpparser.c",
-    "transports/local.c",
-    "transports/smart.c",
-    "transports/smart_pkt.c",
-    "transports/smart_protocol.c",
-    "transports/ssh.c",
-    "transports/ssh_exec.c",
-    "transports/ssh_libssh2.c",
-    "transports/winhttp.c",
-    "tree-cache.c",
-    "tree.c",
-    "worktree.c",
 };
 
 const git2_cli = struct {
@@ -498,7 +402,7 @@ const git2_cli = struct {
             .target = target,
             .optimize = optimize,
         });
-        inline for (git2_include_paths) |inc| {
+        inline for (include_paths) |inc| {
             git2_exe.addIncludePath(b.path(inc));
         }
         git2_exe.linkLibC();
@@ -516,6 +420,17 @@ const git2_cli = struct {
         }
         return git2_exe;
     }
+
+    pub const include_paths = .{
+        "include",
+        files_prefix,
+        git2_util.files_prefix,
+        LibGIT2.files_prefix,
+        LibGIT2.llhttp_prefix,
+        LibGIT2.ntlmclient_prefix,
+        pcre.include_path,
+        xdiff.files_prefix,
+    };
     const files_prefix = "src/cli";
     const common_files = .{
         "cmd.c",
