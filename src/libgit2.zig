@@ -1,6 +1,7 @@
 const std = @import("std");
 const pcre = @import("libgit2/pcre.zig");
 const git2_util = @import("libgit2/git2_util.zig");
+const xdiff = @import("libgit2/xdiff.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -15,33 +16,39 @@ pub fn build(b: *std.Build) void {
     }, target_header_config(target));
     git2_exe.addIncludePath(features_h.getOutput().dirname());
 
-    {
-        const libgit2 = LibGIT2.build(b, target, optimize);
-        libgit2.addIncludePath(features_h.getOutput().dirname());
-        git2_exe.linkLibrary(libgit2);
-        b.installArtifact(libgit2);
+    const libgit2 = LibGIT2.build(b, target, optimize);
+    libgit2.addIncludePath(features_h.getOutput().dirname());
+    b.installArtifact(libgit2);
 
-        const git2_util_lib = git2_util.build(b, target, optimize);
-        git2_util_lib.addIncludePath(features_h.getOutput().dirname());
-        b.installArtifact(git2_util_lib);
-        libgit2.linkLibrary(git2_util_lib);
+    // if (target.result.os.tag == .windows) libgit2.linkLibrary(zlib.artifact("zlib"));
 
-        const pcre_lib = pcre.build(b, target, optimize);
-        b.installArtifact(pcre_lib);
-        libgit2.linkLibrary(pcre_lib);
-        libgit2.addIncludePath(b.path(pcre.include_path));
+    linkLibrary(b, git2_exe, libgit2, LibGIT2.include_path);
 
-        const xdiff_lib = xdiff.build(b, target, optimize);
-        xdiff_lib.addIncludePath(features_h.getOutput().dirname());
-        xdiff_lib.linkLibrary(pcre_lib);
-        xdiff_lib.addIncludePath(b.path(pcre.include_path));
+    const git2_util_lib = git2_util.build(b, target, optimize);
+    git2_util_lib.addIncludePath(features_h.getOutput().dirname());
+    b.installArtifact(git2_util_lib);
+    linkLibrary(b, libgit2, git2_util_lib, git2_util.include_path);
 
-        b.installArtifact(xdiff_lib);
-        libgit2.linkLibrary(xdiff_lib);
-    }
+    const pcre_lib = pcre.build(b, target, optimize);
+    b.installArtifact(pcre_lib);
+    linkLibrary(b, libgit2, pcre_lib, pcre.include_path);
+
+    const xdiff_lib = xdiff.build(b, target, optimize);
+    xdiff_lib.addIncludePath(features_h.getOutput().dirname());
+    linkLibrary(b, xdiff_lib, pcre_lib, pcre.include_path);
+    linkLibrary(b, xdiff_lib, git2_util_lib, git2_util.include_path);
+    b.installArtifact(xdiff_lib);
+
+    linkLibrary(b, libgit2, xdiff_lib, xdiff.include_path);
+    libgit2.linkLibrary(xdiff_lib);
 }
 
-pub const macros = .{
+pub fn linkLibrary(b: *std.Build, compile: *std.Build.Step.Compile, lib: *std.Build.Step.Compile, path: []const u8) void {
+    compile.linkLibrary(lib);
+    compile.addIncludePath(b.path(path));
+}
+
+pub const common_macros = .{
     .{ "_DEBUG", null },
     .{ "_GNU_SOURCE", null },
     .{ "CRYPT_OPENSSL", null },
@@ -86,65 +93,80 @@ pub const common_flags = .{
     // "-Wunused-function",
 };
 
-pub fn target_header_config(t: std.Build.ResolvedTarget) @TypeOf(header_config) {
-    _ = t;
-    var conf_h = header_config;
-    conf_h.GIT_ARCH_64 = 1;
+pub fn target_header_config(t: std.Build.ResolvedTarget) header_config {
+    var conf_h: header_config = .{};
+    if (t.result.os.tag == .windows) {
+        conf_h.GIT_IO_POLL = 0;
+        conf_h.GIT_IO_WSAPOLL = 1;
+        conf_h.GIT_OPENSSL = 0;
+        conf_h.GIT_SHA1_COLLISIONDETECT = 0;
+        conf_h.GIT_SHA1_WIN32 = 1;
+        conf_h.GIT_SHA256_OPENSSL = 0;
+        conf_h.GIT_SHA256_WIN32 = 1;
+        conf_h.GIT_QSORT_GNU = 0;
+        conf_h.GIT_QSORT_MSC = 1;
+    }
     return conf_h;
 }
 
-pub const header_config = .{
-    .GIT_ARCH_64 = 1,
-    .GIT_DEBUG_STRICT_ALLOC = 1,
-    .GIT_DEBUG_STRICT_OPEN = 1,
-    .GIT_GSSAPI = 0,
-    .GIT_HTTPPARSER_BUILTIN = 1,
-    .GIT_HTTPS = 1,
-    .GIT_IO_POLL = 1,
-    .GIT_IO_SELECT = 1,
-    .GIT_NTLM = 1,
-    .GIT_OPENSSL = 0,
-    .GIT_QSORT_GNU = 1,
-    .GIT_RAND_GETENTROPY = 1,
-    .GIT_RAND_GETLOADAVG = 1,
-    .GIT_REGEX_BUILTIN = 1,
-    .GIT_SHA1_COLLISIONDETECT = 1,
-    .GIT_SHA1_OPENSSL = 0,
-    .GIT_SHA256_BUILTIN = 0,
-    .GIT_SHA256_MBEDTLS = 0,
-    .GIT_SHA256_OPENSSL = 1,
-    .GIT_SSH = 1,
-    .GIT_SSH_EXEC = 1,
-    .GIT_THREADS = 1,
-    .GIT_USE_FUTIMENS = 1,
-    .GIT_USE_NSEC = 1,
-    .GIT_USE_STAT_MTIM = 1,
-    .HAVE_BCOPY = 1,
-    .HAVE_DIRENT_H = 1,
-    .HAVE_INTTYPES_H = 1,
-    .HAVE_LONG_LONG = 1,
-    .HAVE_MEMMOVE = 1,
-    .HAVE_STDINT_H = 1,
-    .HAVE_STRERROR = 1,
-    .HAVE_STRTOLL = 1,
-    .HAVE_STRTOQ = 1,
-    .HAVE_SYS_STAT_H = 1,
-    .HAVE_SYS_TYPES_H = "1",
-    .HAVE_UNISTD_H = 1,
-    .HAVE_UNSIGNED_LONG_LONG = 1,
-    .LINK_WITH_STATIC_LIBRARIES = 1,
-    .NEWLINE = 10,
-    .NO_RECURSE = 1,
-    .pcre_have_long_long = 1,
-    .pcre_have_ulong_long = 1,
-    .PCRE_LINK_SIZE = 2,
-    .PCRE_MATCH_LIMIT = 10000000,
-    .PCRE_MATCH_LIMIT_RECURSION = "MATCH_LIMIT",
-    .PCRE_NEWLINE = "LF",
-    .PCRE_PARENS_NEST_LIMIT = 250,
-    .PCRE_POSIX_MALLOC_THRESHOLD = 10,
-    .PCREGREP_BUFSIZE = null,
-    .SUPPORT_PCRE8 = 1,
+pub const header_config = struct {
+    GIT_ARCH_64: u1 = 1,
+    GIT_DEBUG_STRICT_ALLOC: u1 = 1,
+    GIT_DEBUG_STRICT_OPEN: u1 = 1,
+    GIT_GSSAPI: u1 = 0,
+    GIT_HTTPPARSER_BUILTIN: u1 = 1,
+    GIT_HTTPS: u1 = 1,
+    GIT_IO_POLL: u1 = 1,
+    GIT_IO_WSAPOLL: u1 = 0,
+    GIT_IO_SELECT: u1 = 1,
+    GIT_NTLM: u1 = 1,
+    GIT_OPENSSL_DYNAMIC: u1 = 0,
+    GIT_OPENSSL: u1 = 1,
+    GIT_QSORT_GNU: u1 = 1,
+    GIT_QSORT_MSC: u1 = 0,
+    GIT_RAND_GETENTROPY: u1 = 1,
+    GIT_RAND_GETLOADAVG: u1 = 1,
+    GIT_REGEX_BUILTIN: u1 = 1,
+    GIT_SHA1_BUILTIN: u1 = 0,
+    GIT_SHA1_COLLISIONDETECT: u1 = 1,
+    GIT_SHA1_OPENSSL: u1 = 0,
+    GIT_SHA1_WIN32: u1 = 0,
+    GIT_SHA256_BUILTIN: u1 = 0,
+    GIT_SHA256_MBEDTLS: u1 = 0,
+    GIT_SHA256_OPENSSL: u1 = 1,
+    GIT_SHA256_WIN32: u1 = 0,
+    GIT_SSH_EXEC: u1 = 1,
+    GIT_SSH: u1 = 1,
+    GIT_THREADS: u1 = 1,
+    GIT_USE_FUTIMENS: u1 = 1,
+    GIT_USE_NSEC: u1 = 1,
+    GIT_USE_STAT_MTIM: u1 = 1,
+    HAVE_BCOPY: u1 = 1,
+    HAVE_DIRENT_H: u1 = 1,
+    HAVE_INTTYPES_H: u1 = 1,
+    HAVE_LONG_LONG: u1 = 1,
+    HAVE_MEMMOVE: u1 = 1,
+    HAVE_STDINT_H: u1 = 1,
+    HAVE_STRERROR: u1 = 1,
+    HAVE_STRTOLL: u1 = 1,
+    HAVE_STRTOQ: u1 = 1,
+    HAVE_SYS_STAT_H: u1 = 1,
+    HAVE_SYS_TYPES_H: u1 = 1,
+    HAVE_UNISTD_H: u1 = 1,
+    HAVE_UNSIGNED_LONG_LONG: u1 = 1,
+    LINK_WITH_STATIC_LIBRARIES: u1 = 1,
+    NEWLINE: u8 = 10,
+    NO_RECURSE: u1 = 1,
+    pcre_have_long_long: u1 = 1,
+    pcre_have_ulong_long: u1 = 1,
+    PCRE_LINK_SIZE: u2 = 2,
+    PCRE_MATCH_LIMIT_RECURSION: []const u8 = "MATCH_LIMIT",
+    PCRE_MATCH_LIMIT: u32 = 10000000,
+    PCRE_NEWLINE: []const u8 = "LF",
+    PCRE_PARENS_NEST_LIMIT: u18 = 250,
+    PCRE_POSIX_MALLOC_THRESHOLD: u8 = 10,
+    PCREGREP_BUFSIZE: ?void = null,
+    SUPPORT_PCRE8: u1 = 1,
 };
 
 pub const system_libs = .{
@@ -152,46 +174,12 @@ pub const system_libs = .{
     // "krb5",
     // "k5crypto",
     // "com_err",
-    // "ssl",
+    "ssl",
     "crypto",
     "z",
 };
 
-const xdiff = struct {
-    pub fn build(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Step.Compile {
-        const xdiff_lib = b.addStaticLibrary(.{
-            .name = "xdiff",
-            .target = target,
-            .optimize = optimize,
-        });
-        xdiff_lib.linkLibC();
-        xdiff_lib.addCSourceFiles(.{
-            .files = &files,
-            .root = b.path(files_prefix),
-            .flags = &common_flags,
-        });
-        inline for (include_paths) |inc| {
-            xdiff_lib.addIncludePath(b.path(inc));
-        }
-        return xdiff_lib;
-    }
-    const include_paths = .{
-        "include",
-        git2_util.files_prefix,
-    };
-    const files_prefix = "deps/xdiff";
-    const files = .{
-        "xdiffi.c",
-        "xemit.c",
-        "xhistogram.c",
-        "xmerge.c",
-        "xpatience.c",
-        "xprepare.c",
-        "xutils.c",
-    };
-};
-
-const LibGIT2 = struct {
+pub const LibGIT2 = struct {
     pub fn build(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) *std.Build.Step.Compile {
         const libgit2 = b.addStaticLibrary(.{
             .name = "libgit2",
@@ -200,14 +188,14 @@ const LibGIT2 = struct {
         });
         libgit2.linkLibC();
 
-        inline for (macros) |macro| {
+        inline for (common_macros) |macro| {
             libgit2.defineCMacro(macro[0], macro[1]);
         }
 
         inline for (include_paths) |inc| {
             libgit2.addIncludePath(b.path(inc));
         }
-        if (!target.result.isWasm()) {
+        if (!target.result.isWasm() and target.result.os.tag != .windows) {
             inline for (system_libs) |lib| {
                 libgit2.linkSystemLibrary(lib);
             }
@@ -225,7 +213,7 @@ const LibGIT2 = struct {
         });
         libgit2.addCSourceFiles(.{
             .files = &libgit2_files,
-            .root = b.path(files_prefix),
+            .root = b.path(include_path),
             .flags = &common_flags,
         });
         return libgit2;
@@ -233,16 +221,13 @@ const LibGIT2 = struct {
 
     pub const include_paths = .{
         "include",
-        files_prefix,
-        git2_cli.files_prefix,
-        git2_util.files_prefix,
+        include_path,
+        git2_cli.include_path,
         llhttp_prefix,
+        git2_util.include_path,
         ntlmclient_prefix,
-        pcre.include_path,
-        xdiff.files_prefix,
-        // "include/git2", DO NOT INCLUDE THIS IT WILL RUIN STDLIB INCLUDES
     };
-    const files_prefix = "src/libgit2";
+    pub const include_path = "src/libgit2";
     const libgit2_files = .{
         "annotated_commit.c",
         "apply.c",
@@ -408,13 +393,13 @@ const git2_cli = struct {
         git2_exe.linkLibC();
         git2_exe.addCSourceFiles(.{
             .files = &common_files,
-            .root = b.path(files_prefix),
+            .root = b.path(include_path),
             .flags = &common_flags,
         });
         if (target.result.os.tag != .windows) {
             git2_exe.addCSourceFiles(.{
                 .files = &unix_files,
-                .root = b.path(files_prefix),
+                .root = b.path(include_path),
                 .flags = &common_flags,
             });
         }
@@ -423,15 +408,10 @@ const git2_cli = struct {
 
     pub const include_paths = .{
         "include",
-        files_prefix,
-        git2_util.files_prefix,
-        LibGIT2.files_prefix,
-        LibGIT2.llhttp_prefix,
-        LibGIT2.ntlmclient_prefix,
-        pcre.include_path,
-        xdiff.files_prefix,
+        include_path,
+        git2_util.include_path,
     };
-    const files_prefix = "src/cli";
+    const include_path = "src/cli";
     const common_files = .{
         "cmd.c",
         "cmd_cat_file.c",
