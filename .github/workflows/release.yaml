@@ -1,9 +1,7 @@
 on:
-  pull_request:
   push:
-    branches:
-      - master
-      - ci
+    tags:
+      - "*"
 jobs:
   release:
     strategy:
@@ -16,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - uses: goto-bus-stop/setup-zig@v2
-      - run: zig build example --verbose
+      - run: zig build
       - name: "Fetch tags"
         id: fetch-tags
         uses: actions/github-script@v2
