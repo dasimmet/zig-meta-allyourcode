@@ -4,3 +4,6 @@
 [submodule "submodule/gnumake"]
 	path = submodule/gnumake
 	url = https://github.com/allyourcodebase/gnumake.git
+[submodule "submodule/libgit2"]
+	path = submodule/libgit2
+	url = https://github.com/libgit2/libgit2
