@@ -8,8 +8,8 @@ pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
-    var gen_args = std.ArrayList([]const u8).init(arena.allocator());
-    var build_args = std.ArrayList([]const u8).init(arena.allocator());
+    var cmake_args = std.ArrayList([]const u8).init(arena.allocator());
+    var gmake_args = std.ArrayList([]const u8).init(arena.allocator());
     var build_dir: []const u8 = undefined;
     var install_dir: []const u8 = undefined;
     var p_args = std.process.args();
@@ -19,9 +19,9 @@ pub fn main() !void {
         if (i == 0) {
             arg0 = arg;
         } else if (i == 1) { // path to CMAKE
-            try gen_args.append(arg);
+            try cmake_args.append(arg);
         } else if (i == 2) { // path to GMAKE
-            try build_args.append(arg);
+            try gmake_args.append(arg);
         } else if (i == 3) { // path to build dir
             build_dir = arg;
             const gen_dir_arg = try std.mem.join(
@@ -29,9 +29,9 @@ pub fn main() !void {
                 "",
                 &.{ "-B", arg },
             );
-            try gen_args.append(gen_dir_arg);
-            try build_args.append("-C");
-            try build_args.append(arg);
+            try cmake_args.append(gen_dir_arg);
+            try gmake_args.append("-C");
+            try gmake_args.append(arg);
         } else if (i == 4) { // path to install dir
             install_dir = arg;
             const install_dir_arg = try std.mem.join(
@@ -39,11 +39,11 @@ pub fn main() !void {
                 "",
                 &.{ "-DCMAKE_INSTALL_PREFIX=", arg },
             );
-            try gen_args.append(install_dir_arg);
+            try cmake_args.append(install_dir_arg);
         } else if (std.mem.startsWith(u8, arg, "@CM:")) {
-            try gen_args.append(arg[4..]);
+            try cmake_args.append(arg[4..]);
         } else if (std.mem.startsWith(u8, arg, "@GM:")) {
-            try build_args.append(arg[4..]);
+            try gmake_args.append(arg[4..]);
         } else {
             const msg =
                 \\ unknown argument. this command "{s}" expects
@@ -65,18 +65,18 @@ pub fn main() !void {
 
     if (builtin.mode == .Debug or builtin.mode == .ReleaseSafe) {
         try stderr.writer().print("cmake cmd: ", .{});
-        for (gen_args.items) |it| {
+        for (cmake_args.items) |it| {
             try stderr.writer().print("{s} ", .{it});
         }
         try stderr.writer().print("\nmake cmd: ", .{});
-        for (build_args.items) |it| {
+        for (gmake_args.items) |it| {
             try stderr.writer().print("{s} ", .{it});
         }
         try stderr.writer().print("\n", .{});
     }
 
-    try callChild(gen_args.items, allocator);
-    try callChild(build_args.items, allocator);
+    try callChild(cmake_args.items, allocator);
+    try callChild(gmake_args.items, allocator);
     const env = try std.process.getEnvMap(allocator);
     if (env.get("ZIG_CMAKE_REMOVE_BUILD_DIR")) |env_v| {
         if (std.mem.eql(u8, env_v, "1")) {

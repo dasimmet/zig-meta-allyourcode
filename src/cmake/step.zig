@@ -12,14 +12,21 @@ run: *Step.Run,
 toolchain: *Toolchain,
 
 pub const Options = struct {
+    //"-D" defines for cmake
     defines: []const struct { []const u8, []const u8 } = &.{},
+    //store the built cmake in global instead of project local cache
     global_cache: bool = false,
+    //additional options added to the MAKEFLAGS env var
     makeflags: []const u8 = "",
     name: []const u8,
+    //remove the intermediate build directory
     remove_build: bool = false,
+    //directory containing the CMakeLists.txt to build
     source_dir: LazyPath,
+    //zig target to build for
     target: ?std.Build.ResolvedTarget,
     toolchain: ?*Toolchain = null,
+    //show cmake output - defaults to b.verbose if unset
     verbose: ?bool = null,
 };
 
@@ -40,16 +47,14 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     ) catch @panic("OOM");
 
     const bs_run = std.Build.Step.Run.create(b, opt.name);
-    const self = b.allocator.create(CmakeStep) catch @panic("OOM");
-    bs_run.addFileArg(tc.CMAKE_BUILD_RUNNER);
-    // bs_run.clearEnvironment();
-    bs_run.setEnvironmentVariable("ZIG_CMAKE_REMOVE_BUILD_DIR", if (opt.remove_build) "1" else "0");
-    bs_run.setEnvironmentVariable("ZIG_EXE", tc.ZIG_EXE);
-    bs_run.setEnvironmentVariable("MAKEFLAGS", makeflags);
     if (opt.verbose) |verbose| {
         if (verbose) bs_run.stdio = .inherit;
     } else if (b.verbose) bs_run.stdio = .inherit;
 
+    bs_run.addFileArg(tc.CMAKE_BUILD_RUNNER);
+    bs_run.setEnvironmentVariable("ZIG_CMAKE_REMOVE_BUILD_DIR", if (opt.remove_build) "1" else "0");
+    bs_run.setEnvironmentVariable("ZIG_EXE", tc.ZIG_EXE);
+    bs_run.setEnvironmentVariable("MAKEFLAGS", makeflags);
     bs_run.addFileArg(tc.CMAKE);
     bs_run.addFileArg(tc.MAKE);
     const build_dir = bs_run.addOutputDirectoryArg("build");
@@ -66,6 +71,8 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     }) |it| {
         bs_run.addPrefixedFileArg(it[0], it[1]);
     }
+
+    const self = b.allocator.create(CmakeStep) catch @panic("OOM");
     self.* = .{
         .source_dir = opt.source_dir,
         .build_dir = build_dir,
