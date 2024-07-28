@@ -12,6 +12,7 @@ pub fn build(b: *std.Build) void {
         .name = "cmake",
         .target = target,
         .optimize = optimize,
+        .strip = optimize != .Debug and optimize != .ReleaseSafe,
     });
     cmake_bootstrap.linkLibC();
     cmake_bootstrap.linkLibCpp();

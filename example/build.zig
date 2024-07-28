@@ -27,6 +27,7 @@ pub fn build(b: *std.Build) void {
                 ),
                 .defines = &.{
                     .{ "CMAKE_BUILD_TYPE", if (optimize == .Debug) "Debug" else "Release" },
+                    .{ "CMAKE_EXE_LINKER_FLAGS", "-s" },
                 },
             });
             const sqlite3_install = cmake_sqlite3_step.install(b, "");
