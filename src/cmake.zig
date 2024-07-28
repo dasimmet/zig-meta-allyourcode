@@ -83,7 +83,7 @@ pub fn stage2(b: *std.Build, tc: *Toolchain, target: std.Build.ResolvedTarget) *
         .{ "CMAKE_BUILD_TYPE", "Release" },
         .{ "CMAKE_DATA_DIR", "" },
         .{ "CMAKE_DOC_DIR", "" },
-        .{ "CMAKE_EXE_LINKER_FLAGS", "-static -static-libgcc -static-libstdc++" },
+        .{ "CMAKE_EXE_LINKER_FLAGS", "-s -static -static-libgcc -static-libstdc++" },
         .{ "CMAKE_FIND_LIBRARY_SUFFIXES", ".a" },
         .{ "CMAKE_MAN_DIR", "" },
         .{ "CMAKE_SIZEOF_VOID_P", "8" },
