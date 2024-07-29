@@ -109,7 +109,7 @@ fn addLibGitBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
                 .{},
             );
             git2_step.dependOn(&git2_art.step);
-            b.step("libgit2_"++f, "").dependOn(&git2_art.step);
+            b.step("libgit2_" ++ f, "").dependOn(&git2_art.step);
         }
         b.getInstallStep().dependOn(git2_step);
     }
