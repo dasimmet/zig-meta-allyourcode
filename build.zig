@@ -59,8 +59,10 @@ pub fn addCMakeStep(b: *std.Build, opt: cmake.CMakeStep.Options) *cmake.CMakeSte
         .dependency = .cmake,
         .global_cache = opt.global_cache,
     });
+
     if (opt.global_cache) this_dep.builder.cache_root = b.graph.global_cache_root;
     if (opt.toolchain == null) {
+        this_dep.builder.verbose = false;
         const tc = cmake.Toolchain.zigBuildDefaults(this_dep.builder, .{});
         tc.CMAKE = this_dep.namedWriteFiles("cmake").getDirectory().path(this_dep.builder, "bin/cmake");
         if (this_dep.builder.lazyDependency("gnumake", .{
