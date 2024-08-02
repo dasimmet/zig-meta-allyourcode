@@ -12,6 +12,7 @@ pub const libgit2 = @import("src/libgit2.zig");
 pub const DefaultBuildOptions = struct {
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
+    global_cache: bool,
 };
 
 pub fn build(b: *std.Build) void {
@@ -22,7 +23,11 @@ pub fn build(b: *std.Build) void {
             "optimize",
             "Prioritize performance, safety, or binary size",
         ) orelse .ReleaseFast,
+        .global_cache = b.option(bool, "global_cache", "set cache to zig global cache dir") orelse false,
     };
+    if (defaults.global_cache) {
+        b.cache_root = b.graph.global_cache_root;
+    }
 
     if (b.option(
         SubBuild,
@@ -68,7 +73,7 @@ pub fn addCMakeStep(b: *std.Build, opt: cmake.CMakeStep.Options) *cmake.CMakeSte
         if (this_dep.builder.lazyDependency("gnumake", .{
             .target = b.graph.host,
         })) |gnumake| {
-            if (opt.global_cache) gnumake.builder.cache_root = b.graph.global_cache_root;
+            if (opt.global_cache) gnumake.builder.graph.cache_root = b.graph.global_cache_root;
             const gnumake_exe = gnumake.artifact("make");
             tc.MAKE = gnumake_exe.getEmittedBin();
         }
@@ -120,6 +125,7 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
     var cmake_options: CMakeOptionsType = .{
         .target = defaults.target,
         .optimize = defaults.optimize,
+        .global_cache = defaults.global_cache,
     };
     inline for (@typeInfo(cmake.ConfigHeaders.Options).Struct.fields) |f| {
         if (b.option(f.type, "CMAKE_" ++ f.name, "cmake - " ++ f.name)) |opt| {
@@ -141,15 +147,12 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
         }
         break :blk b.host;
     };
-    const global_cache_option = b.option(bool, "global_cache", "set cache to zig global cache dir") orelse false;
-
     if (b.lazyDependency("cmake", .{
         .target = cmake_stage1_target,
         .optimize = defaults.optimize,
     })) |dep| {
-        if (global_cache_option) {
+        if (defaults.global_cache) {
             dep.builder.cache_root = b.graph.global_cache_root;
-            b.cache_root = b.graph.global_cache_root;
         }
         cmake.build(dep.builder);
         const stage1_step = b.step("cmake-stage1", "build the cmake stage1 exe");
@@ -175,6 +178,9 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
             .target = cmake_options.target,
             .optimize = cmake_options.optimize,
         })) |gnumake| {
+            if (cmake_options.global_cache) {
+                gnumake.builder.cache_root = b.graph.global_cache_root;
+            }
             const gnumake_exe = gnumake.artifact("make");
             cmake_tc.MAKE = gnumake_exe.getEmittedBin();
         }
