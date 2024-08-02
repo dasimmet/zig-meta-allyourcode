@@ -3,9 +3,8 @@
     .version = "0.0.0",
     .dependencies = .{
         .cmake = .{
-            .url = "https://github.com/Kitware/CMake/archive/refs/tags/v3.30.1.tar.gz",
-            .hash = "12207d6103f8472338d7594cf5ec2ce0a75637efc0a9a6a6e8e05f6695224e04dc69",
-            .lazy = true,
+            .url = "https://github.com/Kitware/CMake/releases/download/v3.30.1/cmake-3.30.1.tar.gz",
+            .hash = "1220f7291df839d31f4c55438413a5582784e49fcd142e3aa3c08bfc030b6cfa92cf",
         },
         .libgit2 = .{
             .url = "https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.1.tar.gz",
