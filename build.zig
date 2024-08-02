@@ -73,7 +73,7 @@ pub fn addCMakeStep(b: *std.Build, opt: cmake.CMakeStep.Options) *cmake.CMakeSte
         if (this_dep.builder.lazyDependency("gnumake", .{
             .target = b.graph.host,
         })) |gnumake| {
-            if (opt.global_cache) gnumake.builder.graph.cache_root = b.graph.global_cache_root;
+            if (opt.global_cache) gnumake.builder.cache_root = b.graph.global_cache_root;
             const gnumake_exe = gnumake.artifact("make");
             tc.MAKE = gnumake_exe.getEmittedBin();
         }
