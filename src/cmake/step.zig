@@ -67,7 +67,6 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
     inline for (.{
         .{ "@CM:-DCMAKE_C_COMPILER=", tc.CC },
         .{ "@CM:-DCMAKE_CXX_COMPILER=", tc.CXX },
-        .{ "@CM:-DCMAKE_MAKE_PROGRAM=", tc.MAKE },
     }) |it| {
         bs_run.addPrefixedFileArg(it[0], it[1]);
     }

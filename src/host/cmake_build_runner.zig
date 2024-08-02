@@ -12,6 +12,7 @@ pub fn main() !void {
     var gmake_args = std.ArrayList([]const u8).init(arena.allocator());
     var build_dir: []const u8 = undefined;
     var install_dir: []const u8 = undefined;
+    var cmake_gmake_arg: []const u8 = undefined;
     var p_args = std.process.args();
     var i: usize = 0;
     var arg0: []const u8 = undefined;
@@ -22,6 +23,11 @@ pub fn main() !void {
             try cmake_args.append(arg);
         } else if (i == 2) { // path to GMAKE
             try gmake_args.append(arg);
+            cmake_gmake_arg = try std.mem.join(
+                allocator,
+                "",
+                &.{ "-DCMAKE_MAKE_PROGRAM=", arg },
+            );
         } else if (i == 3) { // path to build dir
             build_dir = arg;
             const gen_dir_arg = try std.mem.join(
@@ -30,6 +36,9 @@ pub fn main() !void {
                 &.{ "-B", arg },
             );
             try cmake_args.append(gen_dir_arg);
+            // pass gmake to cmake
+            try cmake_args.append(cmake_gmake_arg);
+
             try gmake_args.append("-C");
             try gmake_args.append(arg);
         } else if (i == 4) { // path to install dir
