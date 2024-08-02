@@ -141,12 +141,13 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
         }
         break :blk b.host;
     };
+    const global_cache_option = b.option(bool, "global_cache", "set cache to zig global cache dir") orelse false;
 
     if (b.lazyDependency("cmake", .{
         .target = cmake_stage1_target,
         .optimize = defaults.optimize,
     })) |dep| {
-        if (b.option(bool, "global_cache", "set cache to zig global cache dir") orelse false) {
+        if (global_cache_option) {
             dep.builder.cache_root = b.graph.global_cache_root;
             b.cache_root = b.graph.global_cache_root;
         }
