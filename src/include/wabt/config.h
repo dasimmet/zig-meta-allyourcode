@@ -30,7 +30,7 @@
 #define HAVE_ALLOCA_H 0
 
 /* Whether <unistd.h> is available */
-#define HAVE_UNISTD_H 0
+#define HAVE_UNISTD_H 1
 
 /* Whether snprintf is defined by stdio.h */
 #define HAVE_SNPRINTF 1
