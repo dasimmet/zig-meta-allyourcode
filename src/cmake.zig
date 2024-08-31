@@ -627,7 +627,7 @@ pub const ConfigHeaders = struct {
             opts.KWSYS_CXX_HAS_UTIMES = 0;
         }
 
-        inline for (@typeInfo(Options).Struct.fields) |f| {
+        inline for (@typeInfo(Options).@"struct".fields) |f| {
             if (b.option(f.type, f.name, f.name ++ " - cmake config header")) |opt| {
                 @field(opts, f.name) = opt;
             }

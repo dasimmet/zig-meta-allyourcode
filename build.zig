@@ -127,7 +127,7 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
         .optimize = defaults.optimize,
         .global_cache = defaults.global_cache,
     };
-    inline for (@typeInfo(cmake.ConfigHeaders.Options).Struct.fields) |f| {
+    inline for (@typeInfo(cmake.ConfigHeaders.Options).@"struct".fields) |f| {
         if (b.option(f.type, "CMAKE_" ++ f.name, "cmake - " ++ f.name)) |opt| {
             @field(cmake_options, f.name) = opt;
         }
@@ -223,18 +223,18 @@ fn addGnuMakeBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
 pub fn mergeStructFields(ta: type, tb: type) type {
     const typeinfo_a = @typeInfo(ta);
     const typeinfo_b = @typeInfo(tb);
-    const fields_size = typeinfo_a.Struct.fields.len + typeinfo_b.Struct.fields.len;
+    const fields_size = typeinfo_a.@"struct".fields.len + typeinfo_b.@"struct".fields.len;
     var fields: [fields_size]std.builtin.Type.StructField = undefined;
-    inline for (typeinfo_a.Struct.fields, 0..) |f, i| {
+    inline for (typeinfo_a.@"struct".fields, 0..) |f, i| {
         fields[i] = f;
     }
-    inline for (typeinfo_b.Struct.fields, typeinfo_a.Struct.fields.len..) |f, i| {
+    inline for (typeinfo_b.@"struct".fields, typeinfo_a.@"struct".fields.len..) |f, i| {
         fields[i] = f;
     }
-    return @Type(.{ .Struct = .{
+    return @Type(.{ .@"struct" = .{
         .fields = &fields,
         .layout = .auto,
         .decls = &.{},
-        .is_tuple = typeinfo_a.Struct.is_tuple,
+        .is_tuple = typeinfo_a.@"struct".is_tuple,
     } });
 }
