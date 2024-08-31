@@ -164,7 +164,7 @@ pub fn addBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
                 .root = wabt.path("src"),
             });
             exe.linkLibrary(lib);
-            // exe.addIncludePath(wabt.path("include"));
+            exe.addIncludePath(wabt.path("include"));
             exe.addIncludePath(b.path("src/include"));
 
             b.installArtifact(exe);
