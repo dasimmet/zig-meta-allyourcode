@@ -5,7 +5,7 @@ pub fn addBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
     const static_target = b.resolveTargetQuery(.{
         .cpu_arch = defaults.target.result.cpu.arch,
         .os_tag = defaults.target.result.os.tag,
-        .abi = .musl,
+        .abi = if (defaults.target.result.os.tag == .windows) .gnu else .musl,
     });
     if (b.lazyDependency("wabt", .{
         .target = defaults.target,
