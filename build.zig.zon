@@ -12,7 +12,7 @@
             .lazy = true,
         },
         .gnumake = .{
-            .url = "https://github.com/dasimmet/gnumake/archive/refs/heads/master.tar.gz",
+            .url = "git+https://github.com/allyourcodebase/gnumake.git#550385f7f63379acf4d345239054259545a527e1",
             .hash = "12205c0210cffaf37f02c521afc689d4ee3ce8e120327e34c5dd1227cf4f22a3c269",
         },
         .wabt = .{
