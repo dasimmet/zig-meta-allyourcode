@@ -34,7 +34,7 @@ pub fn build() void {
 }
 ```
 
-## Ideas for integration
+## integrated builds
 
 - cmake (including custom build step?)
   - ✅ stage1 linux
@@ -47,3 +47,4 @@ pub fn build() void {
   - test other architectures
 - libgit2 ✅
   - build for wasm32-wasi
+- wabt
