@@ -9,7 +9,6 @@ const builtin = @import("builtin");
 pub const cmake = @import("src/cmake.zig");
 pub const libgit2 = @import("src/libgit2.zig");
 pub const wabt = @import("src/wabt.zig");
-pub const wasm2wat = wabt.wasm2wat;
 const min_zig_version = std.SemanticVersion.parse("0.14.0-dev.1417+242d268a0") catch unreachable;
 
 pub const DefaultBuildOptions = struct {
@@ -72,6 +71,16 @@ pub fn build(b: *std.Build) void {
         "example",
         "zig build the example subdirectory",
     ).dependOn(&example.step);
+}
+
+pub fn wasm2wat(b: *std.Build, wasm: std.Build.LazyPath, out_basename: []const u8) std.Build.LazyPath {
+    const this_dep = b.dependencyFromBuildZig(@This(), .{
+        .dependency = .wabt,
+        .target = b.host,
+    });
+    const wat_run = b.addRunArtifact(this_dep.artifact("wasm2wat"));
+    wat_run.addFileArg(wasm);
+    return wat_run.addPrefixedOutputFileArg("--output=", out_basename);
 }
 
 pub fn addCMakeStep(b: *std.Build, opt: cmake.CMakeStep.Options) *cmake.CMakeStep {
