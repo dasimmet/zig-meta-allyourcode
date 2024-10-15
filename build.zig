@@ -74,7 +74,7 @@ pub fn build(b: *std.Build) void {
 }
 
 pub fn wasm2wat(b: *std.Build, wasm: std.Build.LazyPath, out_basename: []const u8) std.Build.LazyPath {
-    const this_dep = b.dependencyFromBuildZig(meta_allyourcode, .{
+    const this_dep = b.dependencyFromBuildZig(@This(), .{
         .dependency = .wabt,
         .target = b.host,
     });
