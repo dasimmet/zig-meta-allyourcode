@@ -15,6 +15,7 @@
         .gnumake = .{
             .url = "git+https://github.com/allyourcodebase/gnumake.git#550385f7f63379acf4d345239054259545a527e1",
             .hash = "12205c0210cffaf37f02c521afc689d4ee3ce8e120327e34c5dd1227cf4f22a3c269",
+            .lazy = true,
         },
         .wabt = .{
             .url = "git+https://github.com/WebAssembly/wabt.git#e3b16dae4166b138bbd04bbe67281f4fa47fd4de",
