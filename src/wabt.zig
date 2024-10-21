@@ -3,14 +3,18 @@ const LazyPath = std.Build.LazyPath;
 const build_zig = @import("../build.zig");
 const DefaultBuildOptions = build_zig.DefaultBuildOptions;
 
-pub fn wasm2wat(b: *std.Build, wasm: LazyPath, out_basename: []const u8) LazyPath {
+pub fn wasm2wat(b: *std.Build, wasm: LazyPath, out_basename: []const u8) ?LazyPath {
     const this_dep = b.dependencyFromBuildZig(build_zig, .{
         .dependency = .wabt,
         .target = b.host,
     });
-    const wat_run = b.addRunArtifact(this_dep.artifact("wasm2wat"));
-    wat_run.addFileArg(wasm);
-    return wat_run.addPrefixedOutputFileArg("--output=", out_basename);
+    if (this_dep.builder.lazyDependency("wabt", .{})) |wabt_dep| {
+        _ = wabt_dep;
+        const wat_run = b.addRunArtifact(this_dep.artifact("wasm2wat"));
+        wat_run.addFileArg(wasm);
+        return wat_run.addPrefixedOutputFileArg("--output=", out_basename);
+    }
+    return null;
 }
 
 pub fn addBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
