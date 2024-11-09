@@ -48,3 +48,6 @@ pub fn build() void {
 - libgit2 ✅
   - build for wasm32-wasi
 - wabt
+  - ✅ compile libwabt and wasm2wat
+  - ✅ add build.zig include code
+

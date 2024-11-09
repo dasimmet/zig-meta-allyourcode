@@ -13,8 +13,8 @@
             .lazy = true,
         },
         .gnumake = .{
-            .url = "git+https://github.com/allyourcodebase/gnumake.git#550385f7f63379acf4d345239054259545a527e1",
-            .hash = "12205c0210cffaf37f02c521afc689d4ee3ce8e120327e34c5dd1227cf4f22a3c269",
+            .url = "git+https://github.com/dasimmet/gnumake?ref=zig-master#1caf766f2407ca8db0a7c0dd50cc14a8194f5be6",
+            .hash = "12200c80dca61a870d0e76bf11bcdbf8abfa57740072c2b6e34a0f1345a0b0696952",
             .lazy = true,
         },
         .wabt = .{
