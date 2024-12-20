@@ -6,7 +6,7 @@ const DefaultBuildOptions = build_zig.DefaultBuildOptions;
 pub fn wasm2wat(b: *std.Build, wasm: LazyPath, out_basename: []const u8) ?LazyPath {
     const this_dep = b.dependencyFromBuildZig(build_zig, .{
         .dependency = .wabt,
-        .target = b.host,
+        .target = b.graph.host,
     });
     if (this_dep.builder.lazyDependency("wabt", .{})) |wabt_dep| {
         _ = wabt_dep;
@@ -46,7 +46,7 @@ pub fn addBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
             .root = wabt.path("src"),
         });
         if (static_target.result.isWasm()) {
-            lib.defineCMacro("_WASI_EMULATED_MMAN", null);
+            lib.root_module.addCMacro("_WASI_EMULATED_MMAN", "");
             lib.linkSystemLibrary("wasi-emulated-mman");
         } else {
             lib.addCSourceFiles(.{

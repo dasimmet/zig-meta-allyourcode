@@ -102,7 +102,7 @@ pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
     const not_on_windows = if (target.os.tag == .windows) "0" else "1";
     const on_windows = if (target.os.tag == .windows) "1" else "0";
     // if (target.os.tag == .windows) {
-    //     comp.defineCMacro(
+    //     comp.root_module.addCMacro(
     //         "KWSYS_ENCODING_DEFAULT_CODEPAGE",
     //         "CP_ACP",
     //     );
@@ -136,7 +136,7 @@ pub fn addMacros(b: *std.Build, comp: *std.Build.Step.Compile) void {
         .{ "CMake_HAVE_CXX_MAKE_UNIQUE", "1" },
         .{ "CMake_HAVE_CXX_FILESYSTEM", "1" },
     }) |macro| {
-        comp.defineCMacro(macro[0], macro[1]);
+        comp.root_module.addCMacro(macro[0], macro[1]);
     }
 }
 
@@ -221,7 +221,7 @@ pub const KwSys = struct {
         kwsys.linkLibCpp();
         addMacros(b, kwsys);
         if (kwsys.rootModuleTarget().os.tag == .windows) {
-            kwsys.defineCMacro("KWSYS_ENCODING_DEFAULT_CODEPAGE", "CP_ACP");
+            kwsys.root_module.addCMacro("KWSYS_ENCODING_DEFAULT_CODEPAGE", "CP_ACP");
         }
         kwsys.addIncludePath(opt.generated_headers);
         kwsys.addIncludePath(b.path("Source/kwsys"));

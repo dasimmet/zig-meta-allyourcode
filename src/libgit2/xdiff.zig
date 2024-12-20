@@ -10,7 +10,7 @@ pub fn build(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.buil
     });
     xdiff_lib.linkLibC();
     inline for (libgit2.common_macros) |it| {
-        xdiff_lib.defineCMacro(it[0], it[1]);
+        xdiff_lib.root_module.addCMacro(it[0], it[1]);
     }
     xdiff_lib.addCSourceFiles(.{
         .files = &files,

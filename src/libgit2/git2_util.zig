@@ -10,7 +10,7 @@ pub fn build(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.buil
     });
     git2_util_lib.linkLibC();
     inline for (libgit2.common_macros) |macro| {
-        git2_util_lib.defineCMacro(macro[0], macro[1]);
+        git2_util_lib.root_module.addCMacro(macro[0], macro[1]);
     }
 
     git2_util_lib.addCSourceFiles(.{
@@ -24,8 +24,8 @@ pub fn build(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.buil
             .root = b.path(win32_include_path),
             .flags = &libgit2.common_flags,
         });
-        git2_util_lib.defineCMacro("GIT_WIN32", null);
-        git2_util_lib.defineCMacro("GIT_IO_WSAPOLL", "1");
+        git2_util_lib.root_module.addCMacro("GIT_WIN32", "");
+        git2_util_lib.root_module.addCMacro("GIT_IO_WSAPOLL", "1");
         git2_util_lib.addIncludePath(b.path(win32_include_path));
     } else {
         git2_util_lib.addCSourceFiles(.{

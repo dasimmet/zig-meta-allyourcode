@@ -49,11 +49,11 @@ pub fn linkLibrary(b: *std.Build, compile: *std.Build.Step.Compile, lib: *std.Bu
 }
 
 pub const common_macros = .{
-    .{ "_DEBUG", null },
-    .{ "_GNU_SOURCE", null },
-    .{ "CRYPT_OPENSSL", null },
-    .{ "GIT_DEPRECATE_HARD", null },
-    .{ "HAVE_CONFIG_H", null },
+    .{ "_DEBUG", "" },
+    .{ "_GNU_SOURCE", "" },
+    .{ "CRYPT_OPENSSL", "" },
+    .{ "GIT_DEPRECATE_HARD", "" },
+    .{ "HAVE_CONFIG_H", "" },
     .{ "NTLM_STATIC", "1" },
     .{ "OPENSSL_API_COMPAT", "0x10100000L" },
     .{ "SIZE_MAX", "0xFFFFFFFFFFFFFFFFULL" },
@@ -189,7 +189,7 @@ pub const LibGIT2 = struct {
         libgit2.linkLibC();
 
         inline for (common_macros) |macro| {
-            libgit2.defineCMacro(macro[0], macro[1]);
+            libgit2.root_module.addCMacro(macro[0], macro[1]);
         }
 
         inline for (include_paths) |inc| {

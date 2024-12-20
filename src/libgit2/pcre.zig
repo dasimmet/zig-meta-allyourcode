@@ -19,7 +19,7 @@ pub fn build(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.buil
     });
     pcre_lib.linkLibC();
     inline for (libgit2.common_macros) |macro| {
-        pcre_lib.defineCMacro(macro[0], macro[1]);
+        pcre_lib.root_module.addCMacro(macro[0], macro[1]);
     }
     pcre_lib.addIncludePath(pcre_config_h.getOutput().dirname());
     return pcre_lib;

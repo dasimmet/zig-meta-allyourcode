@@ -162,7 +162,7 @@ fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
             }) catch @panic("Unknown Target");
             break :blk b.resolveTargetQuery(query);
         }
-        break :blk b.host;
+        break :blk b.graph.host;
     };
     if (b.lazyDependency("cmake", .{
         .target = cmake_stage1_target,
