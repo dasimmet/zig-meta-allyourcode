@@ -5,32 +5,17 @@
     .dependencies = .{
         .cmake = .{
             .url = "https://github.com/Kitware/CMake/releases/download/v3.30.3/cmake-3.30.3.tar.gz",
-            .hash = "1220ffd0bcdd7e2d1a67a6e4ccfc57a7e2cb6787ff808c88164390e0a217d63cab0c",
+            .hash = "N-V-__8AAJPLDwP_0Lzdfi0aZ6bkzPxXp-LLZ4f_gIyIFkOQ",
             .lazy = true,
         },
         .libgit2 = .{
             .url = "https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.1.tar.gz",
-            .hash = "12208db692747f305b79ecfb3ac69e691d0b9584383ec4bcb0eb07b62b73de77b1cf",
+            .hash = "N-V-__8AAN7aKwGNtpJ0fzBbeez7OsaeaR0LlYQ4PsS8sOsH",
             .lazy = true,
         },
         .gnumake = .{
-            .url = "git+https://github.com/dasimmet/gnumake.git?ref=zig-master#4b716a255dfada8079153864f19ba4ccdb487d59",
-            .hash = "1220dddda80d4400307107aca6074c1721c0289abfdb8aa080e79a157f3d9be21f89",
-            .lazy = true,
-        },
-        .wabt = .{
-            .url = "git+https://github.com/WebAssembly/wabt.git#e3b16dae4166b138bbd04bbe67281f4fa47fd4de",
-            .hash = "1220257b14f7fa9059524e036386a5bef999979d31359da8c59d01a4c82f51c8f59e",
-            .lazy = true,
-        },
-        .picosha = .{
-            .url = "git+https://github.com/okdshin/PicoSHA2.git#27fcf6979298949e8a462e16d09a0351c18fcaf2",
-            .hash = "1220980b14c6ea107d69eafcf42f1ddcfc27f797f69fe6a00317715cb732cd4d2c4c",
-            .lazy = true,
-        },
-        .wasmc = .{
-            .url = "git+https://github.com/WebAssembly/wasm-c-api.git#b6dd1fb658a282c64b029867845bc50ae59e1497",
-            .hash = "122070b51dabf5c2473ef29d7e8570020225f37b996b3651227def41c9a513dc851f",
+            .url = "git+https://github.com/dasimmet/gnumake.git?ref=zig-master#5ea895c985b9668f4a0f3a676b2a36ab4c227c14",
+            .hash = "gnumake-4.4.1-QLj9ddvEAAAJy5DoKgCLqbmXhoWKjXN1_16Qzc3uvuu1",
             .lazy = true,
         },
     },
