@@ -8,8 +8,6 @@ const std = @import("std");
 const builtin = @import("builtin");
 pub const cmake = @import("src/cmake.zig");
 pub const libgit2 = @import("src/libgit2.zig");
-pub const wabt = @import("src/wabt.zig");
-pub const wasm2wat = wabt.wasm2wat;
 const min_zig_version = std.SemanticVersion.parse("0.14.0-dev.1417+242d268a0") catch unreachable;
 
 pub const DefaultBuildOptions = struct {
@@ -111,13 +109,11 @@ pub const SubBuild = enum {
     cmake,
     libgit2,
     gnumake,
-    wabt,
 
     pub const mapping = .{
         .{ SubBuild.cmake, addCMakeBootstrap },
         .{ SubBuild.libgit2, addLibGitBuild },
         .{ SubBuild.gnumake, addGnuMakeBuild },
-        .{ SubBuild.wabt, wabt.addBuild },
     };
 };
 

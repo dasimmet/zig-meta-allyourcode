@@ -195,7 +195,7 @@ pub const LibGIT2 = struct {
         inline for (include_paths) |inc| {
             libgit2.addIncludePath(b.path(inc));
         }
-        if (!target.result.isWasm() and target.result.os.tag != .windows) {
+        if ((!target.result.cpu.arch.isWasm()) and target.result.os.tag != .windows) {
             inline for (system_libs) |lib| {
                 libgit2.linkSystemLibrary(lib);
             }
