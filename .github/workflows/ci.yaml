@@ -15,11 +15,11 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v2
-      - uses: goto-bus-stop/setup-zig@v2
+      - uses: mlugg/setup-zig@v2.0.5
       - run: zig build example --verbose
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: goto-bus-stop/setup-zig@v2
+      - uses: mlugg/setup-zig@v2.0.5
       - run: zig fmt --check .
