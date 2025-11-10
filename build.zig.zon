@@ -2,6 +2,7 @@
     .name = .meta_allyourcode,
     .version = "0.0.0",
     .fingerprint = 0x63db2c43a9a61d98,
+    .minimum_zig_version = "0.14.1",
     .dependencies = .{
         .cmake = .{
             .url = "https://github.com/Kitware/CMake/releases/download/v3.30.3/cmake-3.30.3.tar.gz",
