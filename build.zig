@@ -7,8 +7,6 @@ const meta_allyourcode = @This();
 const std = @import("std");
 const builtin = @import("builtin");
 pub const cmake = @import("src/cmake.zig");
-pub const libgit2 = @import("src/libgit2.zig");
-const min_zig_version = std.SemanticVersion.parse("0.14.0-dev.1417+242d268a0") catch unreachable;
 
 pub const DefaultBuildOptions = struct {
     target: std.Build.ResolvedTarget,
@@ -17,18 +15,6 @@ pub const DefaultBuildOptions = struct {
 };
 
 pub fn build(b: *std.Build) void {
-    comptime {
-        const current_zig = builtin.zig_version;
-        if (current_zig.order(min_zig_version) == .lt) {
-            @compileError(
-                std.fmt.comptimePrint("Your Zig version v{} does not meet the minimum build requirement of v{}", .{
-                    current_zig,
-                    min_zig_version,
-                }),
-            );
-        }
-    }
-
     const defaults: DefaultBuildOptions = .{
         .target = b.standardTargetOptions(.{}),
         .optimize = b.option(
@@ -112,26 +98,9 @@ pub const SubBuild = enum {
 
     pub const mapping = .{
         .{ SubBuild.cmake, addCMakeBootstrap },
-        .{ SubBuild.libgit2, addLibGitBuild },
         .{ SubBuild.gnumake, addGnuMakeBuild },
     };
 };
-
-fn addLibGitBuild(b: *std.Build, defaults: DefaultBuildOptions) void {
-    if (b.lazyDependency("libgit2", defaults)) |dep| {
-        libgit2.build(dep.builder);
-        const git2_step = b.step("git2", "build the git2 exe");
-        inline for (.{ "git2", "libgit2", "pcre", "git2_util", "xdiff" }) |f| {
-            const git2_art = b.addInstallArtifact(
-                dep.artifact(f),
-                .{},
-            );
-            git2_step.dependOn(&git2_art.step);
-            b.step("libgit2_" ++ f, "").dependOn(&git2_art.step);
-        }
-        b.getInstallStep().dependOn(git2_step);
-    }
-}
 
 fn addCMakeBootstrap(b: *std.Build, defaults: DefaultBuildOptions) void {
     const CMakeOptionsType: type = mergeStructFields(DefaultBuildOptions, cmake.ConfigHeaders.Options);
