@@ -2,6 +2,7 @@
     .name = .meta_allyourcode_example,
     .version = "0.0.0",
     .fingerprint = 0x13c00d7544731b06,
+    .minimum_zig_version = "0.14.1",
     .paths = .{
         "build.zig",
         "build.zig.zon",
