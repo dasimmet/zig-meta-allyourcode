@@ -13,6 +13,10 @@ pub fn main() !void {
     var build_dir: []const u8 = undefined;
     var install_dir: []const u8 = undefined;
     var cmake_gmake_arg: []const u8 = undefined;
+
+    var nproc_arg_buf: [16]u8 = undefined;
+    const nproc_arg = try std.fmt.bufPrint(&nproc_arg_buf, "-j{}", .{try std.Thread.getCpuCount()});
+
     var p_args = std.process.args();
     var i: usize = 0;
     var arg0: []const u8 = undefined;
@@ -23,6 +27,8 @@ pub fn main() !void {
             try cmake_args.append(arg);
         } else if (i == 2) { // path to GMAKE
             try gmake_args.append(arg);
+
+            try gmake_args.append(nproc_arg);
             cmake_gmake_arg = try std.mem.join(
                 allocator,
                 "",
