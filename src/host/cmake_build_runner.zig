@@ -16,6 +16,8 @@ pub fn main() !void {
     var p_args = std.process.args();
     var i: usize = 0;
     var arg0: []const u8 = undefined;
+    var parallel_buf: [20]u8 = undefined;
+    const gm_parallel_arg = try std.fmt.bufPrint(&parallel_buf, "-j{d}", .{std.Thread.getCpuCount() catch 1});
     while (p_args.next()) |arg| : (i += 1) {
         if (i == 0) {
             arg0 = arg;
@@ -23,6 +25,7 @@ pub fn main() !void {
             try cmake_args.append(arg);
         } else if (i == 2) { // path to GMAKE
             try gmake_args.append(arg);
+            try gmake_args.append(gm_parallel_arg);
             cmake_gmake_arg = try std.mem.join(
                 allocator,
                 "",
@@ -84,7 +87,9 @@ pub fn main() !void {
         try stderr.writer().print("\n", .{});
     }
 
+    std.log.info("cmake cmd: {f}", .{std.json.fmt(cmake_args.items, .{})});
     try callChild(cmake_args.items, allocator);
+    std.log.info("gmake cmd: {f}", .{std.json.fmt(gmake_args.items, .{})});
     try callChild(gmake_args.items, allocator);
     const env = try std.process.getEnvMap(allocator);
     if (env.get("ZIG_CMAKE_REMOVE_BUILD_DIR")) |env_v| {

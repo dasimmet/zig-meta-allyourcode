@@ -40,11 +40,10 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
         break :blk 4;
     };
 
-    const makeflags = std.fmt.allocPrint(
-        b.allocator,
+    const makeflags = b.fmt(
         "-j{d} {s}",
         .{ cpu_count, opt.makeflags },
-    ) catch @panic("OOM");
+    );
 
     const bs_run = std.Build.Step.Run.create(b, opt.name);
     if (opt.verbose) |verbose| {
@@ -97,22 +96,22 @@ pub fn init(b: *std.Build, opt: Options) *CmakeStep {
 }
 
 pub fn addCmakeDefine(self: *CmakeStep, key: []const u8, value: []const u8) void {
-    const option = std.fmt.allocPrint(self.step.owner.allocator, "@CM:-D{s}={s}", .{ key, value }) catch @panic("OOM");
+    const option = self.step.owner.fmt("@CM:-D{s}={s}", .{ key, value });
     self.run.addArg(option);
 }
 
 pub fn addCmakeFileDefine(self: *CmakeStep, key: []const u8, lp: std.Build.LazyPath) void {
-    const option = std.fmt.allocPrint(self.step.owner.allocator, "@CM:-D{s}=", .{key}) catch @panic("OOM");
+    const option = self.step.owner.fmt("@CM:-D{s}=", .{key});
     self.run.addPrefixedFileArg(option, lp);
 }
 
 pub fn addCmakeDirectoryDefine(self: *CmakeStep, key: []const u8, lp: std.Build.LazyPath) void {
-    const option = std.fmt.allocPrint(self.step.owner.allocator, "@CM:-D{s}=", .{key}) catch @panic("OOM");
+    const option = self.step.owner.fmt("@CM:-D{s}=", .{key});
     self.run.addPrefixedDirectoryArg(option, lp);
 }
 
 pub fn addCmakeArtifactDefine(self: *CmakeStep, key: []const u8, lp: *std.Build.Step.Compile) void {
-    const option = std.fmt.allocPrint(self.step.owner.allocator, "@CM:-D{s}=", .{key}) catch @panic("OOM");
+    const option = self.step.owner.fmt("@CM:-D{s}=", .{key});
     self.run.addPrefixedArtifactArg(option, lp);
 }
 

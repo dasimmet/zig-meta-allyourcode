@@ -231,7 +231,7 @@ const GC = struct {
         _ = opt;
         const self = b.allocator.create(@This()) catch @panic("OOM");
         const exe = b.addExecutable(.{
-            .name = "",
+            .name = "gc",
             .root_module = b.createModule(.{
                 .root_source_file = b.path("src/gc.zig"),
                 .target = b.graph.host,
@@ -239,6 +239,10 @@ const GC = struct {
             }),
         });
         const run = b.addRunArtifact(exe);
+        run.has_side_effects = true;
+        run.addArg(b.graph.global_cache_root.path.?);
+        run.addArg(b.cache_root.path.?);
+        if (b.args) |args| run.addArgs(args);
         self.* = .{
             .exe = exe,
             .run = run,
