@@ -93,7 +93,6 @@ pub fn addCMakeStep(b: *std.Build, opt: cmake.CMakeStep.Options) *cmake.CMakeSte
 
 pub const SubBuild = enum {
     cmake,
-    libgit2,
     gnumake,
 
     pub const mapping = .{

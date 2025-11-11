@@ -1,9 +1,4 @@
-# meta-allyourcode
-
-lazy dependencies for zig build.
-This repository is for writing `build.zig` configurations for other c/c++ projects
-
-## CMake
+# CMake bootstrapped with build.zig
 
 using the zig build system, this repository bootstraps `cmake` `3.30.1` without any system cmake
 or the usual shellscript method. it takes a while and is only tested on x64 linux,
@@ -12,7 +7,7 @@ but can be used to build your C/C++ dependency libraries.
 the package also has a custom `CMakeStep` that will configure and build and install a cmake project,
 and providdes a `.install(b, name)` function to get the artifacts:
 ```
-zig fetch --save https://github.com/dasimmet/zig-meta-allyourcode/archive/refs/heads/master.tar.gz
+zig fetch --save git+https://github.com/dasimmet/zig-cmakearchive.git
 ```
 build.zig (from [example](./example/build.zig)):
 ```
@@ -45,9 +40,3 @@ pub fn build() void {
   - 🏃‍♂️test building other cmake projects
   - try to link cmake fully static
   - test other architectures
-- libgit2 ✅
-  - build for wasm32-wasi
-- wabt
-  - ✅ compile libwabt and wasm2wat
-  - ✅ add build.zig include code
-

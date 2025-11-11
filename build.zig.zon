@@ -9,11 +9,6 @@
             .hash = "N-V-__8AAJPLDwP_0Lzdfi0aZ6bkzPxXp-LLZ4f_gIyIFkOQ",
             .lazy = true,
         },
-        .libgit2 = .{
-            .url = "https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.1.tar.gz",
-            .hash = "N-V-__8AAN7aKwGNtpJ0fzBbeez7OsaeaR0LlYQ4PsS8sOsH",
-            .lazy = true,
-        },
         .gnumake = .{
             .url = "git+https://github.com/dasimmet/gnumake.git?ref=zig-master#5ea895c985b9668f4a0f3a676b2a36ab4c227c14",
             .hash = "gnumake-4.4.1-QLj9ddvEAAAJy5DoKgCLqbmXhoWKjXN1_16Qzc3uvuu1",
