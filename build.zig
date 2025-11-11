@@ -15,6 +15,9 @@ pub const DefaultBuildOptions = struct {
 };
 
 pub fn build(b: *std.Build) void {
+    const gc = GC.add(b, .{});
+    b.step("gc", "Garbage Collect build cache").dependOn(&gc.run.step);
+
     const defaults: DefaultBuildOptions = .{
         .target = b.standardTargetOptions(.{}),
         .optimize = b.option(
@@ -219,3 +222,27 @@ pub fn mergeStructFields(ta: type, tb: type) type {
         .is_tuple = typeinfo_a.@"struct".is_tuple,
     } });
 }
+
+const GC = struct {
+    exe: *std.Build.Step.Compile,
+    run: *std.Build.Step.Run,
+    pub const Options = struct {};
+    pub fn add(b: *std.Build, opt: Options) *@This() {
+        _ = opt;
+        const self = b.allocator.create(@This()) catch @panic("OOM");
+        const exe = b.addExecutable(.{
+            .name = "",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/gc.zig"),
+                .target = b.graph.host,
+                .optimize = .Debug,
+            }),
+        });
+        const run = b.addRunArtifact(exe);
+        self.* = .{
+            .exe = exe,
+            .run = run,
+        };
+        return self;
+    }
+};

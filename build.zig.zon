@@ -1,7 +1,7 @@
 .{
-    .name = .meta_allyourcode,
+    .name = .cmake,
     .version = "0.0.0",
-    .fingerprint = 0x63db2c43a9a61d98,
+    .fingerprint = 0x233853f281b6ae5c,
     .minimum_zig_version = "0.14.1",
     .dependencies = .{
         .cmake = .{

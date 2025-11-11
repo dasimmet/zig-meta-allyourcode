@@ -7,9 +7,8 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const meta_import = b.lazyImport(@This(), "meta_allyourcode");
+    const meta_import = b.lazyImport(@This(), "cmake");
 
-    // const optimize = b.standardOptimizeOption(.{});
     if (b.lazyDependency("sqlite3_cmake", .{
         .target = target,
         .optimize = optimize,
